@@ -16,8 +16,25 @@
 //Encoder config
 #define CPR 4192.0f
 
-//Target
-const float TARGET_DEGREES = 360.0f;
+//PID state
+float target_degrees = 360.0f; //set in degrees
+float target_ticks = 0.0f; //Used for PID Control Loop
+float prev_error = 0.0f;
+float integral = 0.0f;
+unsigned long prevTime = 0;
+
+
+//PID gains
+float kp = 0.4f;
+float ki = 0.0f;
+float kd = 0.005f;
+
+//PWM cap
+#define PWM_MAX 150
+
+
+// //Target
+// const float TARGET_DEGREES = 360.0f;
 
 void setupEncoder() {
     pcnt_config_t pcnt_config = {};
@@ -55,6 +72,51 @@ int getPosition() {
     return count;
 }
 
+void update(){
+  //Change in time calculation
+  unsigned long currentTime = millis();
+  float dt = (currentTime - prevTime)/1000.0f; //change in time in seconds
+
+  if (dt <= 0.001f){
+    return;
+  }
+
+  prevTime = currentTime;
+
+  //Calculating error
+  float position = getPosition();
+  float error = target_ticks - position;
+  if (abs(error) < 10) {
+    integral = 0;
+    ledcWrite(RPWM_CH, 0);
+    ledcWrite(LPWM_CH, 0);
+    return;
+  }
+
+  //Integral Calculation
+  integral += error * dt;
+  integral = constrain(integral, -5000, 5000);
+
+  //Derivative calculation
+  float derivative = (error - prev_error)/dt;
+
+  float control_signal = kp * error + ki * integral + kd * derivative;
+  prev_error = error;
+
+  //Converting to PWM------
+  int pwm = (int)(constrain(abs(control_signal), 0, PWM_MAX));
+
+  //Positive control signal is CW
+  if (control_signal >= 0){
+    ledcWrite(RPWM_CH, pwm);
+    ledcWrite(LPWM_CH, 0);
+  }
+  else{
+    ledcWrite(RPWM_CH, 0);
+    ledcWrite(LPWM_CH, pwm);
+  }
+}
+
 void setup() {
   Serial.begin(115200);
   
@@ -63,7 +125,7 @@ void setup() {
   pinMode(LPWM_PIN, OUTPUT);
   digitalWrite(RPWM_PIN, LOW);
   digitalWrite(LPWM_PIN, LOW);
-
+  
   ledcSetup(RPWM_CH, PWM_FREQ, PWM_RESOLUTION);
   ledcAttachPin(RPWM_PIN, RPWM_CH);
   ledcSetup(LPWM_CH, PWM_FREQ, PWM_RESOLUTION);
@@ -72,24 +134,21 @@ void setup() {
   //Set up encoder - setting encoder to 0
   setupEncoder();
 
+  prevTime = millis();
+
+  target_ticks = (target_degrees/360.0f) * CPR;
+
   Serial.println("PWM ready + Encoder ready");
-  Serial.println("Raw Encoder Count:");
 }
 
 
 void loop(){
-  int target_counts = (TARGET_DEGREES/360.0f) * CPR;
+  update();
 
-  if (getPosition() < target_counts){
-    ledcWrite(RPWM_CH, 100);
-    ledcWrite(LPWM_CH, 0);
-  }
-  else {
-    ledcWrite(RPWM_CH, 0);
-    ledcWrite(LPWM_CH, 0);
-  }
-
-  Serial.print("pos: ");
+  Serial.print("Target: ");
+  Serial.print(target_ticks);
+  Serial.print("  Position: ");
   Serial.println(getPosition());
-  delay(100);
+
+  delay(10);
 }
