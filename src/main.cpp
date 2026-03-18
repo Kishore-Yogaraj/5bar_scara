@@ -3,6 +3,7 @@
 #include "motor/DCMotor.h"
 #include "encoder/Encoder.h"
 #include "pid/PIDController.h"
+#include "comms/SerialComms.h"
 
 //Motor 1 
 Encoder       enc1(M1_ENC_A, M1_ENC_B, M1_PCNT_UNIT);
@@ -14,17 +15,25 @@ Encoder       enc2(M2_ENC_A, M2_ENC_B, M2_PCNT_UNIT);
 PIDController pid2(0.4f, 0.0f, 0.005f, 5000.0f, 10.0f);
 DCMotor       motor2(M2_RPWM_PIN, M2_LPWM_PIN, M2_RPWM_CH, M2_LPWM_CH, enc2, pid2);
 
+//Comms Setup
+SerialComms comms(115200);
+
 
 void setup() {
-    Serial.begin(115200);
+    comms.begin();
     motor1.begin();
-    motor1.setTargetDegrees(360.0f);
     motor2.begin();
-    motor2.setTargetDegrees(360.0f);
     Serial.println("Motors ready.");
 }
 
 void loop() {
+  MotorCommand cmd = comms.read();
+
+  if (cmd.valid){
+    motor1.setTargetDegrees(cmd.angle1);
+    motor2.setTargetDegrees(cmd.angle2);
+  }
+
     motor1.update();
     Serial.print("Target: ");
     Serial.print(motor1.getTargetTicks());
