@@ -8,16 +8,16 @@
 #define LPWM_PIN 14
 
 //PWM Config
-#define PWM_FREQ        2000
+#define PWM_FREQ        20000
 #define PWM_RESOLUTION  8
-#define RPWM_CH         0
-#define LPWM_CH         1
+#define RPWM_CH         0 //Controls CW when set to high
+#define LPWM_CH         1 //Controls CCW when set to high
 
 //Encoder config
 #define CPR 4192.0f
 
 //Target
-const float TARGET_DEGREES = 90.0f;
+const float TARGET_DEGREES = 360.0f;
 
 void setupEncoder() {
     pcnt_config_t pcnt_config = {};
@@ -69,11 +69,6 @@ void setup() {
   ledcSetup(LPWM_CH, PWM_FREQ, PWM_RESOLUTION);
   ledcAttachPin(LPWM_PIN, LPWM_CH);
 
-  //Set to 0 so motors don't move on startup
-  ledcWrite(RPWM_CH, 0);
-  ledcWrite(LPWM_CH, 0);
-
-
   //Set up encoder - setting encoder to 0
   setupEncoder();
 
@@ -83,6 +78,18 @@ void setup() {
 
 
 void loop(){
+  int target_counts = (TARGET_DEGREES/360.0f) * CPR;
+
+  if (getPosition() < target_counts){
+    ledcWrite(RPWM_CH, 100);
+    ledcWrite(LPWM_CH, 0);
+  }
+  else {
+    ledcWrite(RPWM_CH, 0);
+    ledcWrite(LPWM_CH, 0);
+  }
+
+  Serial.print("pos: ");
   Serial.println(getPosition());
-  delay(1000);
+  delay(100);
 }
