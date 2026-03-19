@@ -29,7 +29,14 @@ void setup() {
 void loop() {
   MotorCommand cmd = comms.read();
 
-  if (cmd.valid){
+  if (cmd.home) {
+    enc1.reset();
+    enc2.reset();
+    motor1.setTargetDegrees(0.0f);
+    motor2.setTargetDegrees(0.0f);
+    Serial.println("HOME: encoders reset to 0.");
+  }
+  else if (cmd.valid) {
     motor1.setTargetDegrees(cmd.angle1);
     motor2.setTargetDegrees(cmd.angle2);
   }

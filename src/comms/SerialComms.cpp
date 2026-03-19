@@ -8,7 +8,7 @@ void SerialComms::begin() {
 }
 
 MotorCommand SerialComms::read() {
-    MotorCommand cmd = {0.0f, 0.0f, false};
+    MotorCommand cmd = {0.0f, 0.0f, false, false};
 
     if (!Serial.available()) {
         return cmd;
@@ -16,6 +16,11 @@ MotorCommand SerialComms::read() {
 
     String input = Serial.readStringUntil('\n');
     input.trim();
+
+    if (input == "HOME") {
+        cmd.home = true;
+        return cmd;
+    }
 
     int commaIndex = input.indexOf(',');
     if (commaIndex == -1) {

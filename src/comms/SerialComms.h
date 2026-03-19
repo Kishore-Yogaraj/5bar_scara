@@ -5,6 +5,7 @@ struct MotorCommand {
     float angle1;
     float angle2;
     bool  valid;
+    bool  home;
 };
 
 class SerialComms {

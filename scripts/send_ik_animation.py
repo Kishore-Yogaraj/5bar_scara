@@ -46,11 +46,21 @@ X, Y = np.meshgrid(x, y)
 
 # Animation settings
 FPS = 60
+MOVE_TIME = 1.0   # seconds for each move
+ANGLE_TOL = 1e-4
 
 
 # =========================================================
 # HELPER FUNCTIONS
 # =========================================================
+def wrap_to_pi(angle):
+    return (angle + np.pi) % (2 * np.pi) - np.pi
+
+
+def shortest_angle_diff(target, current):
+    return wrap_to_pi(target - current)
+
+
 def calculate_workspace(L1, L2, motor_dist):
     """Same workspace logic as your original code."""
     L0 = motor_dist / 2.0
@@ -212,8 +222,17 @@ if not ik0["valid"]:
 current_theta1 = ik0["theta1"]
 current_theta2 = ik0["theta2"]
 
+target_theta1 = current_theta1
+target_theta2 = current_theta2
+
+start_theta1 = current_theta1
+start_theta2 = current_theta2
+
+animating = False
+anim_frame = 0
 monitor_until = 0.0     # timestamp until which serial output is printed
 monitoring_active = False
+num_frames = max(2, int(FPS * MOVE_TIME))
 selected_point = np.array(initial_point)
 
 
@@ -308,7 +327,9 @@ def draw_robot(theta1, theta2):
 # CLICK HANDLER
 # =========================================================
 def on_click(event):
-    global current_theta1, current_theta2, selected_point
+    global target_theta1, target_theta2
+    global start_theta1, start_theta2
+    global animating, anim_frame, selected_point
 
     if event.inaxes != ax or event.xdata is None or event.ydata is None:
         return
@@ -329,18 +350,24 @@ def on_click(event):
 
     selected_point = np.array([xp, yp])
 
-    # Move instantly to target angles
-    current_theta1 = result["theta1"]
-    current_theta2 = result["theta2"]
+    # Store current as start
+    start_theta1 = current_theta1
+    start_theta2 = current_theta2
+
+    # Target angles from IK
+    target_theta1 = result["theta1"]
+    target_theta2 = result["theta2"]
+
+    # Start animation
+    anim_frame = 0
+    animating = True
 
     clicked_plot.set_data([xp], [yp])
-    draw_robot(current_theta1, current_theta2)
-    fig.canvas.draw_idle()
 
     print("--------------------------------------------------")
     print(f"Clicked point: ({xp:.2f}, {yp:.2f}) mm")
-    print(f"Target theta1: {result['theta1_deg']:.2f} deg")
-    print(f"Target theta2: {result['theta2_deg']:.2f} deg")
+    print(f"Target theta1: {np.degrees(target_theta1):.2f} deg")
+    print(f"Target theta2: {np.degrees(target_theta2):.2f} deg")
 
     cmd1 = M1_SIGN * (result["theta1_deg"] - HOME_ANGLE)
     cmd2 = M2_SIGN * (result["theta2_deg"] - HOME_ANGLE)
@@ -371,6 +398,8 @@ fig.canvas.mpl_connect('key_press_event', on_key)
 # ANIMATION LOOP
 # =========================================================
 def update_animation(frame):
+    global current_theta1, current_theta2
+    global animating, anim_frame
     global monitoring_active
 
     if SERIAL_ENABLED and monitoring_active:
@@ -386,6 +415,27 @@ def update_animation(frame):
                 print(line)
             print("---\n")
             monitoring_active = False
+
+    if animating:
+        anim_frame += 1
+        s = min(anim_frame / num_frames, 1.0)
+
+        # Smooth interpolation
+        s_smooth = 3 * s**2 - 2 * s**3
+
+        d1 = shortest_angle_diff(target_theta1, start_theta1)
+        d2 = shortest_angle_diff(target_theta2, start_theta2)
+
+        current_theta1 = start_theta1 + s_smooth * d1
+        current_theta2 = start_theta2 + s_smooth * d2
+
+        if s >= 1.0 or (abs(shortest_angle_diff(target_theta1, current_theta1)) < ANGLE_TOL and
+                        abs(shortest_angle_diff(target_theta2, current_theta2)) < ANGLE_TOL):
+            current_theta1 = target_theta1
+            current_theta2 = target_theta2
+            animating = False
+
+    draw_robot(current_theta1, current_theta2)
 
     return (
         left_prox_line, left_dist_line,
