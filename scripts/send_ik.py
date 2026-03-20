@@ -5,9 +5,7 @@ from matplotlib.animation import FuncAnimation
 import serial
 import time
 
-# =========================================================
 # PARAMETERS
-# =========================================================
 L1 = 200.0          # Proximal link length (mm)
 L2 = 200.0          # Distal link length (mm)
 motor_dist = 100.0  # Distance between base motors (mm)
@@ -48,11 +46,8 @@ X, Y = np.meshgrid(x, y)
 FPS = 60
 
 
-# =========================================================
 # HELPER FUNCTIONS
-# =========================================================
 def calculate_workspace(L1, L2, motor_dist):
-    """Same workspace logic as your original code."""
     L0 = motor_dist / 2.0
 
     D1 = np.sqrt((X + L0)**2 + Y**2)
@@ -90,7 +85,7 @@ def calculate_workspace(L1, L2, motor_dist):
 
 def solve_ik(xp, yp, L1, L2, motor_dist, comfort_angle_deg=15.0):
     """
-    Solves IK using the same elbows-out branch as your workspace tool.
+    Solves IK using the same elbows-out branch as workspace tool
     Returns proximal joint angles theta1, theta2 measured from global +x.
     """
     L0 = motor_dist / 2.0
@@ -200,9 +195,7 @@ def forward_kinematics(theta1, theta2, L1, L2, motor_dist):
     }
 
 
-# =========================================================
 # INITIAL STATE
-# =========================================================
 # Pick a reasonable initial valid point
 initial_point = (0.0, 390.0)
 ik0 = solve_ik(initial_point[0], initial_point[1], L1, L2, motor_dist, comfort_angle_deg)
@@ -217,9 +210,7 @@ monitoring_active = False
 selected_point = np.array(initial_point)
 
 
-# =========================================================
 # PLOT SETUP
-# =========================================================
 mask = calculate_workspace(L1, L2, motor_dist)
 
 fig, ax = plt.subplots(figsize=(10, 8))
@@ -272,10 +263,7 @@ info_text = ax.text(
 ax.set_xlim(-300, 300)
 ax.set_ylim(-20, 450)
 
-
-# =========================================================
 # DRAW FUNCTION
-# =========================================================
 def draw_robot(theta1, theta2):
     geom = forward_kinematics(theta1, theta2, L1, L2, motor_dist)
     if geom is None:
@@ -303,10 +291,7 @@ def draw_robot(theta1, theta2):
         f"Theta2: {theta2_deg:.2f} deg"
     )
 
-
-# =========================================================
 # CLICK HANDLER
-# =========================================================
 def on_click(event):
     global current_theta1, current_theta2, selected_point
 
@@ -366,10 +351,7 @@ def on_key(event):
 
 fig.canvas.mpl_connect('key_press_event', on_key)
 
-
-# =========================================================
 # ANIMATION LOOP
-# =========================================================
 def update_animation(frame):
     global monitoring_active
 
