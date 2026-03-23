@@ -1,0 +1,100 @@
+{
+  "metadata": {
+    "image_resolution": [
+      640,
+      480
+    ],
+    "num_points": 5,
+    "inliers": 5,
+    "reprojection_error_mm": {
+      "mean": 0.011,
+      "max": 0.027,
+      "per_point": [
+        0.027,
+        0.0134,
+        0.0007,
+        0.0007,
+        0.0134
+      ]
+    }
+  },
+  "correspondences": [
+    {
+      "id": 1,
+      "pixel": [
+        321,
+        241
+      ],
+      "world_mm": [
+        0.0,
+        0.0
+      ],
+      "reprojection_error_mm": 0.027
+    },
+    {
+      "id": 2,
+      "pixel": [
+        602,
+        474
+      ],
+      "world_mm": [
+        35.0,
+        42.5
+      ],
+      "reprojection_error_mm": 0.0134
+    },
+    {
+      "id": 3,
+      "pixel": [
+        599,
+        15
+      ],
+      "world_mm": [
+        -35.0,
+        42.5
+      ],
+      "reprojection_error_mm": 0.0007
+    },
+    {
+      "id": 4,
+      "pixel": [
+        37,
+        472
+      ],
+      "world_mm": [
+        35.0,
+        -42.5
+      ],
+      "reprojection_error_mm": 0.0007
+    },
+    {
+      "id": 5,
+      "pixel": [
+        44,
+        12
+      ],
+      "world_mm": [
+        -35.0,
+        -42.5
+      ],
+      "reprojection_error_mm": 0.0134
+    }
+  ],
+  "homography_matrix": [
+    [
+      -0.0006881686733939336,
+      0.15357100288700384,
+      -36.8115395682412
+    ],
+    [
+      0.15301247062852616,
+      0.0006618383926740921,
+      -49.26025306224
+    ],
+    [
+      -4.773464165741271e-06,
+      3.959880723421403e-05,
+      1.0
+    ]
+  ]
+}
