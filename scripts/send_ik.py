@@ -20,7 +20,7 @@ comfort_angle_deg = 15.0
 PORT            = 'COM3'
 BAUDRATE        = 115200
 HOME_ANGLE      = 90.0   # IK angle (deg from +x) at physical home position
-MONITOR_SECONDS = 3.0    # How long to print ESP32 output after each command
+MONITOR_SECONDS = 30.0    # How long to print ESP32 output after each command
 
 # Flip to -1 if a motor moves opposite to expected direction
 M1_SIGN = -1

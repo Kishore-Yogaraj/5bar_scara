@@ -15,7 +15,7 @@ DCMotor::DCMotor(int rpwmPin, int lpwmPin,
       _lastPwm(0), _maxStep(5) {}
 
 float DCMotor::getTargetTicks() const{
-    return _targetTicks;
+    return _finalTicks;
 }
 
 void DCMotor::begin() {
