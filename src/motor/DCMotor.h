@@ -13,6 +13,7 @@ public:
     void setTargetDegrees(float degrees);
     void update();
     float getTargetTicks() const;
+    void setPID(float kp_val,float ki_val, float kd_val);
 
 private:
     int     _rpwmPin, _lpwmPin;
@@ -28,10 +29,25 @@ private:
     float _startTicks= 0;
     float _finalTicks= 0;
     float _moveStartTime =0;
-    bool  _isMoving = false;   
+    bool  _isMoving = false; 
+    float _vmax;  
     float _amax;
 
     // PWM smoothing
     int _lastPwm;
     int _maxStep;
+
+    // test ing different PID
+    float error = 0;
+    float prev_error = 0;
+    float integral = 0;
+    float derivative = 0;
+
+    float output = 0;
+    float targetPosition = 0;
+    float dt = 0;
+    unsigned long prevTime = 0;
+    float kp = 0;
+    float ki = 0;
+    float kd = 0;
 };

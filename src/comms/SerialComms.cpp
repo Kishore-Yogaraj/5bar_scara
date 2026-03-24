@@ -18,8 +18,8 @@ MotorCommand SerialComms::read() {
     input.trim();
 
     // Debug (optional but useful)
-    Serial.print("RAW: ");
-    Serial.println(input);
+    // Serial.print("RAW: ");
+    // Serial.println(input);
 
     // HOME
     if (input == "HOME") {

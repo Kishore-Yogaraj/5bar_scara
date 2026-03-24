@@ -4,7 +4,7 @@ import time
 #Config
 PORT            = 'COM3'
 BAUDRATE        = 115200
-MONITOR_SECONDS = 10.0
+MONITOR_SECONDS = 5.0
 
 # Connect
 ser = serial.Serial(PORT, BAUDRATE, timeout=0.05)

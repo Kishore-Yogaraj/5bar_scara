@@ -49,96 +49,144 @@ void DCMotor::setTargetDegrees(float degrees) {
 
     _moveStartTime = millis() / 1000.0f;
 
-    _amax = 100.0f;   // tune this
+    _amax = 2000.0;   // tune this
 
     _isMoving = true;
 
     _pid.reset();
 }
+void DCMotor::update()
+{
+    int position = _encoder.getPosition();
 
-void DCMotor::update() {
-    // if (!_isMoving) {
-    //     ledcWrite(_rpwmCh, 0);
-    //     ledcWrite(_lpwmCh, 0);
-    //     _lastPwm = 0;
-    //     return;
-    // }
+    unsigned long now = millis();
+    dt = (now - prevTime) / 1000.0;
+    prevTime = now;
 
-    float currentTime = millis() / 1000.0f;          // current time in seconds
-    float dt = currentTime - _prevTime;             // time since last update
-    if (dt < 0.005f) return;                        // skip update if too fast
-    _prevTime = currentTime;
+    // in case dt is 0
+    if (dt <= 0.0001) return;
 
-    float t = currentTime - _moveStartTime;         // time since motion started
+    error = getTargetTicks() - position;
 
-    float distance = _finalTicks - _startTicks;    // total movement in ticks
-    float dir = (distance >= 0) ? 1.0f : -1.0f;    // movement direction
-    distance = abs(distance);
-
-    // triangular profile: acceleration = deceleration
-    float t_acc = sqrt(distance / _amax);           // time to reach peak velocity
-    float t_total = 2.0f * t_acc;                  // total motion time
-
-    float refPos;
-
-    // Determine reference position along the triangle
-    if (t >= t_total) {
-        // finished motion
-        refPos = _finalTicks;
-        _isMoving = false;
-    } else if (t < t_acc) {
-        // acceleration phase
-        refPos = _startTicks + dir * 0.5f * _amax * t * t;
-    } else {
-        // deceleration phase
-        float t2 = t - t_acc;
-        refPos = _finalTicks - dir * 0.5f * _amax * (t_acc - t2) * (t_acc - t2);
-    }
-
-    // PID error and output
-    float error = refPos - _encoder.getPosition();
-    float output = _pid.compute(error, dt);
-
-    
-    int maxStep = 5;
-
-    if (!_isMoving && abs(error) < 10) {
+    if (abs(error) < 15)
+    {
         ledcWrite(_rpwmCh, 0);
         ledcWrite(_lpwmCh, 0);
-        _lastPwm = 0;
-        _pid.reset();
         return;
     }
 
-    
-   int targetPwm = (int)constrain(abs(output), 0, 200);
+    integral += error * dt;
+    integral = constrain(integral, -5000, 5000);
 
-   int minPwm = 60;
+    derivative = (error - prev_error) / dt;
 
-    if (_isMoving && abs(error) > 50 && targetPwm < minPwm) {
-        targetPwm = minPwm;
-    }
+    output = kp * error + ki * integral + kd * derivative;
 
-    // Slew rate limit
-    int pwm;
-    if (targetPwm > _lastPwm)
-        pwm = min(_lastPwm + _maxStep, targetPwm);
-    else
-        pwm = max(_lastPwm - _maxStep, targetPwm);
+    prev_error = error;
 
-    _lastPwm = pwm;
+    int pwm = constrain(abs(output), 0, 50);
 
-    if (output > 0) {
+    if (output > 0)
+    {
         ledcWrite(_rpwmCh, pwm);
         ledcWrite(_lpwmCh, 0);
-    } else {
+    }
+    else
+    {
         ledcWrite(_rpwmCh, 0);
         ledcWrite(_lpwmCh, pwm);
     }
-    if (distance < 1.0f) {
-        ledcWrite(_rpwmCh, 0);
-        ledcWrite(_lpwmCh, 0);
-        return;
-    }
-
 }
+void DCMotor::setPID(float kp_val, float ki_val, float kd_val)
+{
+    kp = kp_val;
+    ki = ki_val;
+    kd = kd_val;
+}
+
+// void DCMotor::update() {
+//     // if (!_isMoving) {
+//     //     ledcWrite(_rpwmCh, 0);
+//     //     ledcWrite(_lpwmCh, 0);
+//     //     _lastPwm = 0;
+//     //     return;
+//     // }
+
+//     float currentTime = millis() / 1000.0f;          // current time in seconds
+//     float dt = currentTime - _prevTime;             // time since last update
+//     if (dt < 0.005f) return;                        // skip update if too fast
+//     _prevTime = currentTime;
+
+//     float t = currentTime - _moveStartTime;         // time since motion started
+
+//     float distance = _finalTicks - _startTicks;    // total movement in ticks
+//     float dir = (distance >= 0) ? 1.0f : -1.0f;    // movement direction
+//     distance = abs(distance);
+
+//     // triangular profile: acceleration = deceleration
+//     float t_acc = sqrt(distance / _amax);           // time to reach peak velocity
+//     float t_total = 2.0f * t_acc;                  // total motion time
+
+//     float refPos;
+
+//     // Determine reference position along the triangle
+//     if (t >= t_total) {
+//         // finished motion
+//         refPos = _finalTicks;
+//         _isMoving = false;
+//     } else if (t < t_acc) {
+//         // acceleration phase
+//         refPos = _startTicks + dir * 0.5f * _amax * t * t;
+//     } else {
+//         // deceleration phase
+//         float t2 = t - t_acc;
+//         refPos = _finalTicks - dir * 0.5f * _amax * (t_acc - t2) * (t_acc - t2);
+//     }
+
+//     // PID error and output
+//     float error = refPos - _encoder.getPosition();
+//     float output = _pid.compute(error, dt);
+
+    
+//     int maxStep = 5;
+
+//     if (!_isMoving && abs(error) < 10) {
+//         ledcWrite(_rpwmCh, 0);
+//         ledcWrite(_lpwmCh, 0);
+//         _lastPwm = 0;
+//         _pid.reset();
+//         return;
+//     }
+
+    
+//    int targetPwm = (int)constrain(abs(output), 0, 200);
+
+//    int minPwm = 0;
+
+//     if (_isMoving && abs(error) > 50 && targetPwm < minPwm) {
+//         targetPwm = minPwm;
+//     }
+
+//     // Slew rate limit
+//     int pwm;
+//     if (targetPwm > _lastPwm)
+//         pwm = min(_lastPwm + _maxStep, targetPwm);
+//     else
+//         pwm = max(_lastPwm - _maxStep, targetPwm);
+
+//     _lastPwm = pwm;
+
+//     if (output > 0) {
+//         ledcWrite(_rpwmCh, pwm);
+//         ledcWrite(_lpwmCh, 0);
+//     } else {
+//         ledcWrite(_rpwmCh, 0);
+//         ledcWrite(_lpwmCh, pwm);
+//     }
+//     if (distance < 1.0f) {
+//         ledcWrite(_rpwmCh, 0);
+//         ledcWrite(_lpwmCh, 0);
+//         return;
+//     }
+
+// }
