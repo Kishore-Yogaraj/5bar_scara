@@ -16,8 +16,9 @@ while True:
     try:
         angle1 = float(input("Motor 1 angle (deg): "))
         angle2 = float(input("Motor 2 angle (deg): "))
+       
 
-        command = f"{angle1},{angle2}\n"
+        command = f"A,{angle1},{angle2}\n"
         ser.write(command.encode())
         ser.flush()
         print(f"  >> Sent: {command.strip()}")

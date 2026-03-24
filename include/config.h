@@ -18,8 +18,15 @@
 #define M2_LPWM_CH   3
 #define M2_PCNT_UNIT PCNT_UNIT_1
 
+//stepper motor
+#define SM_dir      15
+#define SM_step     2
+
+
 //Shared hardware config
 #define PWM_FREQ       20000
 #define PWM_RESOLUTION 8
 #define PWM_MAX        150
 #define CPR            4192.0f
+#define STEPS_PER_REV  25600
+

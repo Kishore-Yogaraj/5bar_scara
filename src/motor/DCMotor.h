@@ -23,4 +23,16 @@ private:
 
     float         _targetTicks;
     unsigned long _prevTime;
+
+    // Trajectory control
+    float _startTicks;
+    float _finalTicks;
+    float _moveStartTime;
+    bool  _isMoving;
+    float _vmax;    
+    float _amax;
+
+    // PWM smoothing
+    int _lastPwm;
+    int _maxStep;
 };
