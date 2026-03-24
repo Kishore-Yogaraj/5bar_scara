@@ -34,12 +34,22 @@ void DCMotor::begin() {
 }
 
 void DCMotor::setTargetDegrees(float degrees) {
-    _startTicks = _encoder.getPosition();
+
+    float currentPos = _encoder.getPosition();
+    // float newTarget  = currentPos + (degrees / 360.0f) * CPR;  // relative move
+
+    // // ignore tiny moves
+    // if (abs(newTarget - currentPos) < 5.0f) {
+    //     _isMoving = false;
+    //     return;
+    // }
+    _startTicks = currentPos;
     _finalTicks = (degrees / 360.0f) * CPR;
+    
 
     _moveStartTime = millis() / 1000.0f;
-    _vmax = 3000.0f;   // tune this
-    _amax = 6000.0f;   // tune this
+
+    _amax = 100.0f;   // tune this
 
     _isMoving = true;
 
@@ -47,63 +57,46 @@ void DCMotor::setTargetDegrees(float degrees) {
 }
 
 void DCMotor::update() {
-
     // if (!_isMoving) {
     //     ledcWrite(_rpwmCh, 0);
     //     ledcWrite(_lpwmCh, 0);
     //     _lastPwm = 0;
     //     return;
     // }
-    float currentTime = millis() / 1000.0f;
-    float dt = (currentTime - _prevTime);
-    if (dt < 0.005f) return;
+
+    float currentTime = millis() / 1000.0f;          // current time in seconds
+    float dt = currentTime - _prevTime;             // time since last update
+    if (dt < 0.005f) return;                        // skip update if too fast
     _prevTime = currentTime;
 
-    
-    float t = currentTime - _moveStartTime;
+    float t = currentTime - _moveStartTime;         // time since motion started
 
-    float distance = _finalTicks - _startTicks;
-    float dir = (distance >= 0) ? 1.0f : -1.0f;
+    float distance = _finalTicks - _startTicks;    // total movement in ticks
+    float dir = (distance >= 0) ? 1.0f : -1.0f;    // movement direction
     distance = abs(distance);
 
-    // time to accelerate
-    float t_acc = _vmax / _amax;
-
-    // distance during accel
-    float d_acc = 0.5f * _amax * t_acc * t_acc;
-
-    // check if triangular (short move)
-    float t_total;
-
-    if (2 * d_acc > distance) {
-        // triangular profile
-        t_acc = sqrt(distance / _amax);
-        t_total = 2 * t_acc;
-    } else {
-        float d_const = distance - 2 * d_acc;
-        float t_const = d_const / _vmax;
-        t_total = 2 * t_acc + t_const;
-    }
+    // triangular profile: acceleration = deceleration
+    float t_acc = sqrt(distance / _amax);           // time to reach peak velocity
+    float t_total = 2.0f * t_acc;                  // total motion time
 
     float refPos;
 
+    // Determine reference position along the triangle
     if (t >= t_total) {
+        // finished motion
         refPos = _finalTicks;
         _isMoving = false;
     } else if (t < t_acc) {
         // acceleration phase
-        refPos = _startTicks + dir * (0.5f * _amax * t * t);
-    } else if (t < (t_total - t_acc)) {
-        // constant velocity
-        float t1 = t - t_acc;
-        refPos = _startTicks + dir * (d_acc + _vmax * t1);
+        refPos = _startTicks + dir * 0.5f * _amax * t * t;
     } else {
-        // deceleration
-        float t2 = t - (t_total - t_acc);
-        refPos = _finalTicks - dir * (0.5f * _amax * (t_acc - t2) * (t_acc - t2));
+        // deceleration phase
+        float t2 = t - t_acc;
+        refPos = _finalTicks - dir * 0.5f * _amax * (t_acc - t2) * (t_acc - t2);
     }
-    
-    float error =  refPos - _encoder.getPosition();
+
+    // PID error and output
+    float error = refPos - _encoder.getPosition();
     float output = _pid.compute(error, dt);
 
     

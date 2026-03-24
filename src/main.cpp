@@ -57,22 +57,18 @@ void loop() {
 
 
     motor1.update();
+    Serial.print("Target1: ");
+    Serial.print(motor1.getTargetTicks());
+    Serial.print(" M1: "); 
+    Serial.println(enc1.getPosition());
+    
     motor2.update();
 
-   
- 
-    // Serial.print("Target1: ");
-    // Serial.print(motor1.getTargetTicks());
-    // Serial.print(" M1: "); 
-    // Serial.println(enc1.getPosition());
-    // delay(100);
-
-    
-    // Serial.print("Target2: ");
-    // Serial.print(motor2.getTargetTicks());
-    // Serial.print(" M2: "); 
-    // Serial.println(enc2.getPosition());
-    // delay(100);
+    Serial.print("Target2: ");
+    Serial.print(motor2.getTargetTicks());
+    Serial.print(" M2: "); 
+    Serial.println(enc2.getPosition());
+    delay(10);
     
     
     

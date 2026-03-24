@@ -25,11 +25,10 @@ private:
     unsigned long _prevTime;
 
     // Trajectory control
-    float _startTicks;
-    float _finalTicks;
-    float _moveStartTime;
-    bool  _isMoving;
-    float _vmax;    
+    float _startTicks= 0;
+    float _finalTicks= 0;
+    float _moveStartTime =0;
+    bool  _isMoving = false;   
     float _amax;
 
     // PWM smoothing
