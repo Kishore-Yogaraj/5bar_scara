@@ -468,9 +468,10 @@ def _run_preview(args: argparse.Namespace):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Detector — debug live preview")
+    _here = Path(__file__).parent
     parser.add_argument("--source",     type=str, default=None)
     parser.add_argument("--camera",     type=int, default=0)
-    parser.add_argument("--homography", type=str, default="vision/homography.json")
-    parser.add_argument("--hsv",        type=str, default="vision/hsv_config.json")
-    parser.add_argument("--intrinsics", type=str, default="vision/intrinsics")
+    parser.add_argument("--homography", type=str, default=str(_here / "homography.json"))
+    parser.add_argument("--hsv",        type=str, default=str(_here / "hsv_config.json"))
+    parser.add_argument("--intrinsics", type=str, default=str(_here / "intrinsics"))
     _run_preview(parser.parse_args())
