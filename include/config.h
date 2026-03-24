@@ -21,5 +21,5 @@
 //Shared hardware config
 #define PWM_FREQ       20000
 #define PWM_RESOLUTION 8
-#define PWM_MAX        150
+#define PWM_MAX        80
 #define CPR            4192.0f
