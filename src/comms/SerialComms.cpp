@@ -8,7 +8,7 @@ void SerialComms::begin() {
 }
 
 MotorCommand SerialComms::read() {
-    MotorCommand cmd = {0.0f, 0.0f, false, false};
+    MotorCommand cmd = {0.0f, 0.0f, 90, false, false};
 
     if (!Serial.available()) {
         return cmd;
@@ -22,14 +22,22 @@ MotorCommand SerialComms::read() {
         return cmd;
     }
 
-    int commaIndex = input.indexOf(',');
-    if (commaIndex == -1) {
+    int comma1 = input.indexOf(',');
+    if (comma1 == -1) {
         return cmd;     // malformed, no comma found
     }
 
-    cmd.angle1 = input.substring(0, commaIndex).toFloat();
-    cmd.angle2 = input.substring(commaIndex + 1).toFloat();
-    cmd.valid  = true;
+    int comma2 = input.indexOf(',', comma1 + 1);
+
+    cmd.angle1 = input.substring(0, comma1).toFloat();
+    if (comma2 == -1) {
+        // two-value format (backwards compat)
+        cmd.angle2 = input.substring(comma1 + 1).toFloat();
+    } else {
+        cmd.angle2      = input.substring(comma1 + 1, comma2).toFloat();
+        cmd.servo_angle = input.substring(comma2 + 1).toInt();
+    }
+    cmd.valid = true;
 
     return cmd;
 }

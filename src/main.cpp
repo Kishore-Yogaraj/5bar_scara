@@ -4,8 +4,9 @@
 #include "encoder/Encoder.h"
 #include "pid/PIDController.h"
 #include "comms/SerialComms.h"
+#include "servo/MyServo.h"
 
-//Motor 1 
+//Motor 1
 Encoder       enc1(M1_ENC_A, M1_ENC_B, M1_PCNT_UNIT);
 PIDController pid1(6.0f, 0.001f, 0.16f, 5000.0f, 10.0f);
 DCMotor       motor1(M1_RPWM_PIN, M1_LPWM_PIN, M1_RPWM_CH, M1_LPWM_CH, enc1, pid1);
@@ -18,12 +19,18 @@ DCMotor       motor2(M2_RPWM_PIN, M2_LPWM_PIN, M2_RPWM_CH, M2_LPWM_CH, enc2, pid
 //Comms Setup
 SerialComms comms(115200);
 
-bool moving = false;
+//Servo Setup
+MyServo     rotatemotor(19, 4);
+
+bool moving          = false;
+int  pendingServoAngle = 0;
 
 void setup() {
     comms.begin();
     motor1.begin();
     motor2.begin();
+    rotatemotor.begin();
+    rotatemotor.writeAngle(0);   // start at neutral
     Serial.println("Motors ready.");
 }
 
@@ -41,13 +48,14 @@ void loop() {
   else if (cmd.valid) {
     motor1.setTargetDegrees(cmd.angle1);
     motor2.setTargetDegrees(cmd.angle2);
+    pendingServoAngle = cmd.servo_angle;
     moving = true;
   }
 
     motor1.update();
     Serial.print("Target: ");
     Serial.print(motor1.getTargetTicks());
-    Serial.print(" M1: "); 
+    Serial.print(" M1: ");
     Serial.println(enc1.getPosition());
 
     motor2.update();
@@ -60,8 +68,15 @@ void loop() {
         float err1 = abs(motor1.getTargetTicks() - (float)enc1.getPosition());
         float err2 = abs(motor2.getTargetTicks() - (float)enc2.getPosition());
         if (err1 <= 20.0f && err2 <= 20.0f) {
-            Serial.println("DONE");
             moving = false;
+            // Hold position while waiting (keep PID running to prevent drift)
+            unsigned long t = millis();
+            while (millis() - t < 1000) { motor1.update(); motor2.update(); delay(10); }
+            rotatemotor.writeAngle(pendingServoAngle);
+            t = millis();
+            while (millis() - t < 1000) { motor1.update(); motor2.update(); delay(10); }
+            rotatemotor.writeAngle(0);
+            Serial.println("DONE");
         }
     }
 

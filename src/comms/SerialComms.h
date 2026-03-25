@@ -4,6 +4,7 @@
 struct MotorCommand {
     float angle1;
     float angle2;
+    int   servo_angle;
     bool  valid;
     bool  home;
 };
