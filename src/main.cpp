@@ -67,7 +67,7 @@ void loop() {
     if (moving) {
         float err1 = abs(motor1.getTargetTicks() - (float)enc1.getPosition());
         float err2 = abs(motor2.getTargetTicks() - (float)enc2.getPosition());
-        if (err1 <= 20.0f && err2 <= 20.0f) {
+        if (err1 <= 10.0f && err2 <= 10.0f) {
             moving = false;
             // Hold position while waiting (keep PID running to prevent drift)
             unsigned long t = millis();
