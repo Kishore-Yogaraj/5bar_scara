@@ -62,7 +62,7 @@ CONFIG = {
     # ── Timing (seconds) ──────────────────────────────────────────────────────
     "startup_delay":      3.0,   # wait at launch before doing anything
     "dwell_seconds":      3.0,   # how long to hold position at each object
-    "move_drain_timeout": 4.0,   # how long to listen for ESP32 after each move
+    "move_drain_timeout": 15.0,  # how long to wait for ESP32 DONE after each move
 
     # ── Pick ordering strategy ────────────────────────────────────────────────
     # "nearest"   — nearest to robot origin first (default from get_detections)
