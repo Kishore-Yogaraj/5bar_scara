@@ -18,6 +18,7 @@ DCMotor       motor2(M2_RPWM_PIN, M2_LPWM_PIN, M2_RPWM_CH, M2_LPWM_CH, enc2, pid
 //Comms Setup
 SerialComms comms(115200);
 
+bool moving = false;
 
 void setup() {
     comms.begin();
@@ -34,11 +35,13 @@ void loop() {
     enc2.reset();
     motor1.setTargetDegrees(0.0f);
     motor2.setTargetDegrees(0.0f);
+    moving = false;
     Serial.println("HOME: encoders reset to 0.");
   }
   else if (cmd.valid) {
     motor1.setTargetDegrees(cmd.angle1);
     motor2.setTargetDegrees(cmd.angle2);
+    moving = true;
   }
 
     motor1.update();
@@ -50,7 +53,18 @@ void loop() {
     motor2.update();
     Serial.print("Target: ");
     Serial.print(motor2.getTargetTicks());
-    Serial.print(" M2: "); 
+    Serial.print(" M2: ");
     Serial.println(enc2.getPosition());
+
+    if (moving) {
+        float err1 = abs(motor1.getTargetTicks() - (float)enc1.getPosition());
+        float err2 = abs(motor2.getTargetTicks() - (float)enc2.getPosition());
+        if (err1 <= 20.0f && err2 <= 20.0f) {
+            Serial.println("DONE");
+            moving = false;
+        }
+    }
+
     delay(10);
-}
+
+  }
