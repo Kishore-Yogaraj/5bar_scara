@@ -5,6 +5,7 @@
 #include "pid/PIDController.h"
 #include "comms/SerialComms.h"
 #include "servo/MyServo.h"
+#include "stepper/StepperMotor.h"
 
 //Motor 1
 Encoder       enc1(M1_ENC_A, M1_ENC_B, M1_PCNT_UNIT);
@@ -22,6 +23,10 @@ SerialComms comms(115200);
 //Servo Setup
 MyServo     rotatemotor(19, 4);
 
+//Stepper Setup
+StepperMotor stepper(SM_step, SM_dir, STEPS_PER_REV);
+
+
 bool moving          = false;
 int  pendingServoAngle = 0;
 
@@ -31,6 +36,7 @@ void setup() {
     motor2.begin();
     rotatemotor.begin();
     rotatemotor.writeAngle(0);   // start at neutral
+    stepper.begin();
     Serial.println("Motors ready.");
 }
 
@@ -50,6 +56,11 @@ void loop() {
     motor2.setTargetDegrees(cmd.angle2);
     pendingServoAngle = cmd.servo_angle;
     moving = true;
+  }
+  else if (cmd.rotate) {
+    stepper.setDirection(false);   // true = CCW — flip to false if rotation direction is wrong
+    stepper.moveAngleSinusoidal(45, SM_MIN_DELAY, SM_MAX_DELAY);
+    Serial.println("DONE");
   }
 
     motor1.update();
@@ -72,7 +83,7 @@ void loop() {
             // Hold position while waiting (keep PID running to prevent drift)
             unsigned long t = millis();
             while (millis() - t < 1000) { motor1.update(); motor2.update(); delay(10); }
-            rotatemotor.writeAngle(pendingServoAngle);
+            rotatemotor.writeAngle(pendingServoAngle + 10);
             t = millis();
             while (millis() - t < 1000) { motor1.update(); motor2.update(); delay(10); }
             rotatemotor.writeAngle(0);

@@ -7,6 +7,7 @@ struct MotorCommand {
     int   servo_angle;
     bool  valid;
     bool  home;
+    bool  rotate;   // triggers 180° stepper repositioning
 };
 
 class SerialComms {

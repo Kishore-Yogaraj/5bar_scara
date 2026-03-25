@@ -18,6 +18,13 @@
 #define M2_LPWM_CH   3
 #define M2_PCNT_UNIT PCNT_UNIT_1
 
+//Stepper
+#define SM_dir       15
+#define SM_step      2
+#define SM_MIN_DELAY 200  // µs — fastest step delay (peak speed)
+#define SM_MAX_DELAY 500  // µs — slowest step delay (start/end of ramp)
+#define STEPS_PER_REV  25600
+
 //Shared hardware config
 #define PWM_FREQ       20000
 #define PWM_RESOLUTION 8

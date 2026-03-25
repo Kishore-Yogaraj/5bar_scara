@@ -63,6 +63,8 @@ CONFIG = {
     "startup_delay":      3.0,   # wait at launch before doing anything
     "dwell_seconds":      3.0,   # how long to hold position at each object
     "move_drain_timeout": 15.0,  # how long to wait for ESP32 DONE after each move
+    "rotate_timeout":     30.0,  # how long to wait for ESP32 DONE after ROTATE
+    "rotate_settle":       3.0,  # settle countdown after stepper returns
 
     # ── Pick ordering strategy ────────────────────────────────────────────────
     # "nearest"   — nearest to robot origin first (default from get_detections)
@@ -93,6 +95,7 @@ log = logging.getLogger("pick")
 class State(Enum):
     STARTUP     = auto()
     SCAN        = auto()
+    ROTATE_BACK = auto()
     MOVE_TO_OBJ = auto()
     DWELL       = auto()
     DONE        = auto()
@@ -310,7 +313,28 @@ def run(cfg: dict, comms: SerialComms | None):
                     cv2.waitKey(1)
 
                 current = visit_list.pop(0)
-                state   = State.MOVE_TO_OBJ
+                state   = State.ROTATE_BACK
+
+            # ── ROTATE BACK ───────────────────────────────────────────────────
+            elif state == State.ROTATE_BACK:
+                log.info("Rotating stepper back to pickup position …")
+                if comms is not None:
+                    ok = comms.send_rotate()
+                    if not ok:
+                        log.error("  ROTATE command failed — continuing anyway.")
+                    elif not comms.wait_for_done("DONE", timeout=cfg["rotate_timeout"]):
+                        log.warning("  Rotate timed out waiting for DONE (%.1fs).",
+                                    cfg["rotate_timeout"])
+                else:
+                    log.info("  [SIM] ROTATE command not sent.")
+
+                ok = countdown(cfg["rotate_settle"], "Settling",
+                               cap, cfg["show_preview"], H, H_inv,
+                               vcfg, K, dist, last_detections, comms)
+                if not ok:
+                    break
+
+                state = State.MOVE_TO_OBJ
 
             # ── MOVE TO OBJECT ────────────────────────────────────────────────
             elif state == State.MOVE_TO_OBJ:

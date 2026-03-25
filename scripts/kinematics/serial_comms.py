@@ -12,6 +12,7 @@ SerialComms(port, baudrate)     — connection manager (context manager support)
     .disconnect()               — flush & close
     .send_command(cmd1, cmd2)   — send "cmd1,cmd2\n" to firmware
     .send_home()                — send "HOME\n" to reset encoder zero
+    .send_rotate()              — send "ROTATE\n" to trigger 180° stepper return
     .drain(timeout)             — read & yield lines until timeout expires
     .wait_for_done(keyword, timeout) — block until firmware echoes keyword
     .is_connected               — bool property
@@ -133,6 +134,28 @@ class SerialComms:
             return True
         except serial.SerialException as exc:
             log.error("Write failed: %s", exc)
+            return False
+
+    def send_rotate(self) -> bool:
+        """
+        Send the ROTATE command to trigger a 180° stepper repositioning.
+
+        The ESP32 will rotate the stepper back to the pickup position and
+        reply with "DONE" when the move is complete.
+
+        Returns True if the write succeeded.
+        """
+        if not self.is_connected:
+            log.error("send_rotate called but serial port is not open.")
+            return False
+
+        try:
+            self._ser.write(b"ROTATE\n")
+            self._ser.flush()
+            log.info("ROTATE command sent.")
+            return True
+        except serial.SerialException as exc:
+            log.error("ROTATE write failed: %s", exc)
             return False
 
     def send_home(self) -> bool:

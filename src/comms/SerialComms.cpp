@@ -8,7 +8,7 @@ void SerialComms::begin() {
 }
 
 MotorCommand SerialComms::read() {
-    MotorCommand cmd = {0.0f, 0.0f, 90, false, false};
+    MotorCommand cmd = {0.0f, 0.0f, 90, false, false, false};
 
     if (!Serial.available()) {
         return cmd;
@@ -19,6 +19,11 @@ MotorCommand SerialComms::read() {
 
     if (input == "HOME") {
         cmd.home = true;
+        return cmd;
+    }
+
+    if (input == "ROTATE") {
+        cmd.rotate = true;
         return cmd;
     }
 
