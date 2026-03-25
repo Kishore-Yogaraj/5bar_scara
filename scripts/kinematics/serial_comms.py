@@ -109,13 +109,14 @@ class SerialComms:
 
     # ── Commands ──────────────────────────────────────────────────────────────
 
-    def send_command(self, cmd1: float, cmd2: float) -> bool:
+    def send_command(self, cmd1: float, cmd2: float, servo_angle: int = 90) -> bool:
         """
-        Send motor angle deltas to the firmware.
+        Send motor angle deltas and servo angle to the firmware.
 
-        The wire format is:  "<cmd1>,<cmd2>\\n"
+        The wire format is:  "<cmd1>,<cmd2>,<servo_angle>\\n"
         where cmd1 / cmd2 are signed floating-point degrees relative to the
-        physical home position, produced by ik_solver.angles_to_commands().
+        physical home position, produced by ik_solver.angles_to_commands(),
+        and servo_angle is an integer in [0, 180] for the gripper rotation servo.
 
         Returns True if the write succeeded, False otherwise.
         """
@@ -123,7 +124,8 @@ class SerialComms:
             log.error("send_command called but serial port is not open.")
             return False
 
-        message = f"{cmd1:.2f},{cmd2:.2f}\n"
+        servo_angle = max(0, min(180, int(servo_angle)))
+        message = f"{cmd1:.2f},{cmd2:.2f},{servo_angle}\n"
         try:
             self._ser.write(message.encode())
             self._ser.flush()

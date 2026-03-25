@@ -109,6 +109,11 @@ def solve_ik(
     if np.abs(cos_g2) > cos_gamma_max:
         return {"valid": False, "reason": "Right arm near-singular (poor transmission angle)."}
 
+    # ── Distal link angle (left arm) ─────────────────────────────────────────
+    E1       = np.array([-L0 + L1 * np.cos(theta1), L1 * np.sin(theta1)])
+    distal1  = np.array([xp - E1[0], yp - E1[1]])
+    phi1     = np.arctan2(distal1[1], distal1[0])
+
     return {
         "valid":      True,
         "x":          xp,
@@ -117,6 +122,7 @@ def solve_ik(
         "theta2":     theta2,
         "theta1_deg": np.degrees(theta1),
         "theta2_deg": np.degrees(theta2),
+        "phi1_deg":   np.degrees(phi1),
     }
 
 
@@ -283,8 +289,8 @@ if __name__ == "__main__":
         (500.0, 300.0),   # out of reach — should fail
     ]
 
-    print(f"{'Point':>20}  {'Valid':>5}  {'θ1 (°)':>10}  {'θ2 (°)':>10}  {'cmd1':>8}  {'cmd2':>8}")
-    print("-" * 72)
+    print(f"{'Point':>20}  {'Valid':>5}  {'θ1 (°)':>10}  {'θ2 (°)':>10}  {'φ1 (°)':>10}  {'cmd1':>8}  {'cmd2':>8}")
+    print("-" * 82)
     for xp, yp in test_points:
         r = solve_ik(xp, yp)
         if r["valid"]:
@@ -293,6 +299,7 @@ if __name__ == "__main__":
             ee = fk["P"] if fk else (float("nan"), float("nan"))
             print(f"  ({xp:6.1f}, {yp:6.1f})  {str(r['valid']):>5}  "
                   f"{r['theta1_deg']:>10.3f}  {r['theta2_deg']:>10.3f}  "
+                  f"{r['phi1_deg']:>10.3f}  "
                   f"{c1:>8.3f}  {c2:>8.3f}   "
                   f"FK=({ee[0]:.1f}, {ee[1]:.1f})")
         else:

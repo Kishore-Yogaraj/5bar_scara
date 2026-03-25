@@ -108,9 +108,10 @@ def move_to(
     comms: SerialComms | None,
     label: str = "",
     drain_timeout: float = 4.0,
+    object_angle_deg: float = 0.0,
 ) -> bool:
     """
-    Solve IK for (x_mm, y_mm) and send the motor command.
+    Solve IK for (x_mm, y_mm) and send the motor + servo command.
 
     Returns True on success, False if IK fails or the serial write fails.
     In simulation mode (comms is None) always returns True after logging.
@@ -122,14 +123,22 @@ def move_to(
         return False
 
     cmd1, cmd2 = angles_to_commands(ik["theta1_deg"], ik["theta2_deg"])
-    log.info("  → %s  (%.1f, %.1f) mm  θ1=%.2f°  θ2=%.2f°  cmd=(%.2f, %.2f)",
-             label, x_mm, y_mm, ik["theta1_deg"], ik["theta2_deg"], cmd1, cmd2)
+    diff = abs(object_angle_deg - ik["phi1_deg"])
+    if diff > 180:
+        diff = 360 - diff
+    if diff > 90:
+        diff = 180 - diff
+    servo_angle = int(round(diff))
+    
+    log.info("  → %s  (%.1f, %.1f) mm  θ1=%.2f°  θ2=%.2f°  φ1=%.2f°  servo=%d°  cmd=(%.2f, %.2f)",
+             label, x_mm, y_mm, ik["theta1_deg"], ik["theta2_deg"],
+             ik["phi1_deg"], servo_angle, cmd1, cmd2)
 
     if comms is None:
         log.info("  [SIM] command not sent.")
         return True
 
-    ok = comms.send_command(cmd1, cmd2)
+    ok = comms.send_command(cmd1, cmd2, servo_angle)
     if not ok:
         log.error("  Serial write failed.")
         return False
@@ -314,6 +323,7 @@ def run(cfg: dict, comms: SerialComms | None):
                     comms,
                     label=f"OBJ-{visited}",
                     drain_timeout=cfg["move_drain_timeout"],
+                    object_angle_deg=current["angle_deg"],
                 )
 
                 if not ok:
