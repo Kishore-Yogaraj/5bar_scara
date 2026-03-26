@@ -6,6 +6,7 @@
 #include "comms/SerialComms.h"
 #include "servo/MyServo.h"
 #include "stepper/StepperMotor.h"
+#include "gripper/Gripper.h"
 
 //Motor 1
 Encoder       enc1(M1_ENC_A, M1_ENC_B, M1_PCNT_UNIT);
@@ -23,6 +24,11 @@ SerialComms comms(115200);
 //Servo Setup
 MyServo     rotatemotor(19, 4);
 
+//Gripper Setup
+MyServo     gripServo(GRIP_SERVO_PIN, GRIP_SERVO_CH);
+MyServo     liftServo(LIFT_SERVO_PIN, LIFT_SERVO_CH);
+Gripper     myGripper(gripServo, liftServo);
+
 //Stepper Setup
 StepperMotor stepper(SM_step, SM_dir, STEPS_PER_REV);
 
@@ -36,6 +42,7 @@ void setup() {
     motor2.begin();
     rotatemotor.begin();
     rotatemotor.writeAngle(0);   // start at neutral
+    myGripper.begin(GRIP_OPEN_ANGLE, GRIP_CLOSED_ANGLE, LIFT_UP_ANGLE, LIFT_DOWN_ANGLE);
     stepper.begin();
     Serial.println("Motors ready.");
 }
@@ -58,8 +65,36 @@ void loop() {
     moving = true;
   }
   else if (cmd.rotate) {
-    stepper.setDirection(false); //CW
+    stepper.setDirection(false); //CW — to pick zone
     stepper.moveAngleSinusoidal(45, SM_MIN_DELAY, SM_MAX_DELAY);
+    Serial.println("DONE");
+  }
+  else if (cmd.rotate_home) {
+    stepper.setDirection(true);  //CCW — back to drop zone
+    stepper.moveAngleSinusoidal(45, SM_MIN_DELAY, SM_MAX_DELAY);
+    Serial.println("DONE");
+  }
+  else if (cmd.pick) {
+    myGripper.pickSequence();
+    while (myGripper.isRunningPick()) {
+      myGripper.update();
+      motor1.update();
+      motor2.update();
+      delay(10);
+    }
+    rotatemotor.writeAngle(0);
+    unsigned long pt = millis();
+    while (millis() - pt < 500) { motor1.update(); motor2.update(); delay(10); }
+    Serial.println("DONE");
+  }
+  else if (cmd.drop) {
+    myGripper.dropSequence();
+    while (myGripper.isRunningDrop()) {
+      myGripper.update();
+      motor1.update();
+      motor2.update();
+      delay(10);
+    }
     Serial.println("DONE");
   }
 
@@ -75,18 +110,20 @@ void loop() {
     Serial.print(" M2: ");
     Serial.println(enc2.getPosition());
 
+    myGripper.update();
+
     if (moving) {
         float err1 = abs(motor1.getTargetTicks() - (float)enc1.getPosition());
         float err2 = abs(motor2.getTargetTicks() - (float)enc2.getPosition());
         if (err1 <= 10.0f && err2 <= 10.0f) {
             moving = false;
-            // Hold position while waiting (keep PID running to prevent drift)
+            // Hold position while PID settles
             unsigned long t = millis();
             while (millis() - t < 1000) { motor1.update(); motor2.update(); delay(10); }
-            rotatemotor.writeAngle(pendingServoAngle + 10);
+            // Rotate gripper to object angle; servo stays here until PICK rotates it back
+            rotatemotor.writeAngle(pendingServoAngle);
             t = millis();
-            while (millis() - t < 1000) { motor1.update(); motor2.update(); delay(10); }
-            rotatemotor.writeAngle(0);
+            while (millis() - t < 500) { motor1.update(); motor2.update(); delay(10); }
             Serial.println("DONE");
         }
     }

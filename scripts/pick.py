@@ -60,12 +60,15 @@ CONFIG = {
     "camera_index": 0,
 
     # ── Timing (seconds) ──────────────────────────────────────────────────────
-    "startup_delay":      3.0,   # wait at launch before doing anything
-    "dwell_seconds":      3.0,   # how long to hold position at each object
-    "move_drain_timeout": 15.0,  # how long to wait for ESP32 DONE after each move
-    "rotate_timeout":     30.0,  # how long to wait for ESP32 DONE after ROTATE
-    "rotate_settle":       3.0,  # settle countdown after stepper returns
-    "arms_in_timeout":    10.0,  # how long to wait for ESP32 DONE after arms-in move
+    "startup_delay":       3.0,  # wait at launch before doing anything
+    "move_drain_timeout":  15.0, # how long to wait for ESP32 DONE after each arm move
+    "rotate_timeout":      30.0, # how long to wait for ESP32 DONE after ROTATE
+    "rotate_settle":        3.0, # settle countdown after stepper reaches pick zone
+    "rotate_home_timeout": 30.0, # how long to wait for ESP32 DONE after ROTATE_HOME
+    "rotate_home_settle":   3.0, # settle countdown after stepper returns to drop zone
+    "arms_in_timeout":     10.0, # how long to wait for ESP32 DONE after arms-in move
+    "pick_timeout":        15.0, # how long to wait for ESP32 DONE after PICK
+    "drop_timeout":        10.0, # how long to wait for ESP32 DONE after DROP
 
     # ── Arms-in (tuck) angles ──────────────────────────────────────────────────
     # IK angles (degrees from +x axis) the arms move to before the stepper rotates.
@@ -73,7 +76,13 @@ CONFIG = {
     # HOME_ANGLE is 90° (straight up); values below 90° pull left arm inward,
     # values above 90° pull right arm inward.
     "arms_in_theta1_deg": 125.0,   # left arm tuck angle
-    "arms_in_theta2_deg": 55.0,  # right arm tuck angle
+    "arms_in_theta2_deg":  55.0,   # right arm tuck angle
+
+    # ── Drop-off position ──────────────────────────────────────────────────────
+    # Arm angles (degrees) to move to at the drop zone before releasing the object.
+    # Adjust until the end-effector is over the drop target.
+    "drop_theta1_deg": 110.0,   # left arm angle at drop position
+    "drop_theta2_deg": 70.0,   # right arm angle at drop position
 
     # ── Pick ordering strategy ────────────────────────────────────────────────
     # "nearest"   — nearest to robot origin first (default from get_detections)
@@ -102,13 +111,17 @@ log = logging.getLogger("pick")
 # ─────────────────────────────────────────────────────────────────────────────
 
 class State(Enum):
-    STARTUP     = auto()
-    SCAN        = auto()
-    ARMS_IN     = auto()   # tuck arms before stepper rotates
-    ROTATE_BACK = auto()
-    MOVE_TO_OBJ = auto()
-    DWELL       = auto()
-    DONE        = auto()
+    STARTUP          = auto()
+    SCAN             = auto()
+    ARMS_IN          = auto()   # tuck arms before stepper rotates to pick zone
+    ROTATE_BACK      = auto()   # stepper CW to pick zone
+    MOVE_TO_OBJ      = auto()   # arm moves to object; ESP32 rotates gripper on arrival
+    PICK_OBJ         = auto()   # send PICK; ESP32 picks up + rotates gripper back
+    ARMS_IN_AFTER_PICK = auto() # tuck arms before rotating back to drop zone
+    ROTATE_TO_DROP   = auto()   # stepper CCW back to drop zone
+    MOVE_TO_DROP     = auto()   # arm moves to drop position
+    DROP_OBJ         = auto()   # send DROP; ESP32 releases object
+    DONE             = auto()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -327,19 +340,19 @@ def run(cfg: dict, comms: SerialComms | None):
 
             # ── ARMS IN ───────────────────────────────────────────────────────
             elif state == State.ARMS_IN:
-                # Step 1: move to 90° home position first
-                log.info("Moving arms to home position (90°, 90°) …")
-                home_cmd1, home_cmd2 = angles_to_commands(90.0, 90.0)
-                log.info("  arms-home: θ1=90.0°  θ2=90.0°  cmd=(%.2f, %.2f)",
-                         home_cmd1, home_cmd2)
-                if comms is not None:
-                    ok = comms.send_command(home_cmd1, home_cmd2, 0)
-                    if not ok:
-                        log.warning("  Arms-home command failed — continuing to tuck.")
-                    elif not comms.wait_for_done("DONE", timeout=cfg["arms_in_timeout"]):
-                        log.warning("  Arms-home timed out (%.1fs).", cfg["arms_in_timeout"])
-                else:
-                    log.info("  [SIM] Arms-home command not sent.")
+                # # Step 1: move to 90° home position first
+                # log.info("Moving arms to home position (90°, 90°) …")
+                # home_cmd1, home_cmd2 = angles_to_commands(90.0, 90.0)
+                # log.info("  arms-home: θ1=90.0°  θ2=90.0°  cmd=(%.2f, %.2f)",
+                #          home_cmd1, home_cmd2)
+                # if comms is not None:
+                #     ok = comms.send_command(home_cmd1, home_cmd2, 0)
+                #     if not ok:
+                #         log.warning("  Arms-home command failed — continuing to tuck.")
+                #     elif not comms.wait_for_done("DONE", timeout=cfg["arms_in_timeout"]):
+                #         log.warning("  Arms-home timed out (%.1fs).", cfg["arms_in_timeout"])
+                # else:
+                #     log.info("  [SIM] Arms-home command not sent.")
 
                 # Step 2: move to configured tuck angles
                 log.info("Bringing arms to tucked position …")
@@ -401,20 +414,100 @@ def run(cfg: dict, comms: SerialComms | None):
                     else:
                         state = State.DONE
                 else:
-                    state = State.DWELL
+                    state = State.PICK_OBJ
 
-            # ── DWELL ─────────────────────────────────────────────────────────
-            elif state == State.DWELL:
-                log.info("  At position — dwelling for %.0fs.", cfg["dwell_seconds"])
-                ok = countdown(cfg["dwell_seconds"], "Dwelling",
+            # ── PICK OBJECT ───────────────────────────────────────────────────
+            elif state == State.PICK_OBJ:
+                log.info("  Picking up object …")
+                if comms is not None:
+                    ok = comms.send_pick()
+                    if ok:
+                        if not comms.wait_for_done("DONE", timeout=cfg["pick_timeout"]):
+                            log.warning("  PICK timed out (%.1fs).", cfg["pick_timeout"])
+                else:
+                    log.info("  [SIM] PICK not sent.")
+                state = State.ARMS_IN_AFTER_PICK
+
+            # ── ARMS IN AFTER PICK ────────────────────────────────────────────
+            elif state == State.ARMS_IN_AFTER_PICK:
+                # Same tuck sequence as ARMS_IN, then go to ROTATE_TO_DROP
+                # log.info("Moving arms to home position (90°, 90°) …")
+                # home_cmd1, home_cmd2 = angles_to_commands(90.0, 90.0)
+                # if comms is not None:
+                #     ok = comms.send_command(home_cmd1, home_cmd2, 0)
+                #     if not ok:
+                #         log.warning("  Arms-home command failed — continuing to tuck.")
+                #     elif not comms.wait_for_done("DONE", timeout=cfg["arms_in_timeout"]):
+                #         log.warning("  Arms-home timed out (%.1fs).", cfg["arms_in_timeout"])
+                # else:
+                #     log.info("  [SIM] Arms-home command not sent.")
+
+                log.info("Bringing arms to tucked position …")
+                cmd1, cmd2 = angles_to_commands(
+                    cfg["arms_in_theta1_deg"], cfg["arms_in_theta2_deg"]
+                )
+                if comms is not None:
+                    ok = comms.send_command(cmd1, cmd2, 0)
+                    if not ok:
+                        log.error("  Arms-in command failed — continuing.")
+                    elif not comms.wait_for_done("DONE", timeout=cfg["arms_in_timeout"]):
+                        log.warning("  Arms-in timed out (%.1fs).", cfg["arms_in_timeout"])
+                else:
+                    log.info("  [SIM] Arms-in command not sent.")
+                state = State.ROTATE_TO_DROP
+
+            # ── ROTATE TO DROP ────────────────────────────────────────────────
+            elif state == State.ROTATE_TO_DROP:
+                log.info("Rotating stepper back to drop zone …")
+                if comms is not None:
+                    ok = comms.send_rotate_home()
+                    if not ok:
+                        log.error("  ROTATE_HOME command failed — continuing anyway.")
+                    elif not comms.wait_for_done("DONE", timeout=cfg["rotate_home_timeout"]):
+                        log.warning("  Rotate-home timed out (%.1fs).",
+                                    cfg["rotate_home_timeout"])
+                else:
+                    log.info("  [SIM] ROTATE_HOME command not sent.")
+
+                ok = countdown(cfg["rotate_home_settle"], "Settling",
                                cap, cfg["show_preview"], H, H_inv,
                                vcfg, K, dist, last_detections, comms)
                 if not ok:
                     break
+                state = State.MOVE_TO_DROP
+
+            # ── MOVE TO DROP POSITION ─────────────────────────────────────────
+            elif state == State.MOVE_TO_DROP:
+                log.info("Moving to drop position: θ1=%.1f°  θ2=%.1f°",
+                         cfg["drop_theta1_deg"], cfg["drop_theta2_deg"])
+                cmd1, cmd2 = angles_to_commands(
+                    cfg["drop_theta1_deg"], cfg["drop_theta2_deg"]
+                )
+                log.info("  drop-move: cmd=(%.2f, %.2f)", cmd1, cmd2)
+                if comms is not None:
+                    ok = comms.send_command(cmd1, cmd2, 0)
+                    if not ok:
+                        log.error("  Drop-move command failed.")
+                    elif not comms.wait_for_done("DONE", timeout=cfg["move_drain_timeout"]):
+                        log.warning("  Drop-move timed out (%.1fs).", cfg["move_drain_timeout"])
+                else:
+                    log.info("  [SIM] Drop-move command not sent.")
+                state = State.DROP_OBJ
+
+            # ── DROP OBJECT ───────────────────────────────────────────────────
+            elif state == State.DROP_OBJ:
+                log.info("  Dropping object …")
+                if comms is not None:
+                    ok = comms.send_drop()
+                    if ok:
+                        if not comms.wait_for_done("DONE", timeout=cfg["drop_timeout"]):
+                            log.warning("  DROP timed out (%.1fs).", cfg["drop_timeout"])
+                else:
+                    log.info("  [SIM] DROP not sent.")
 
                 if visit_list:
                     current = visit_list.pop(0)
-                    state   = State.MOVE_TO_OBJ
+                    state   = State.ARMS_IN
                 else:
                     state = State.DONE
 

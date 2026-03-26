@@ -10,17 +10,43 @@ MyServo::MyServo(int pin, int channel) {
 void MyServo::begin() {
     ledcSetup(_channel, _freq, _resolution);
     ledcAttachPin(_pin, _channel);
+    _currentAngle = 0.0f;
+    _targetAngle  = 0.0f;
+    _lastTime     = millis();
 }
 
-// Logic implementation
+// Direct write (instant, no slewing)
 void MyServo::writeAngle(int angle) {
     angle = constrain(angle, 0, 180);
-    
-    // Map angle to pulse width
+
     long us = map(angle, 0, 180, _minUs, _maxUs);
-    
-    // Convert us to 16-bit duty cycle (20000us = 50Hz period)
     uint32_t duty = (us * 65535) / 20000;
-    
     ledcWrite(_channel, duty);
+}
+
+// Set smooth-motion target
+void MyServo::setTargetAngle(int angle) {
+    _targetAngle = constrain(angle, 0, 180);
+}
+
+// Call every loop() — slews currentAngle toward targetAngle at _speed deg/s
+void MyServo::update() {
+    unsigned long now = millis();
+    float dt = (now - _lastTime) / 1000.0f;
+    _lastTime = now;
+
+    float error   = _targetAngle - _currentAngle;
+    float maxStep = _speed * dt;
+
+    if (abs(error) <= maxStep) {
+        _currentAngle = _targetAngle;
+    } else {
+        _currentAngle += (error > 0 ? maxStep : -maxStep);
+    }
+
+    writeAngle((int)_currentAngle);
+}
+
+bool MyServo::isAtTarget() {
+    return abs(_currentAngle - _targetAngle) < 1.0f;
 }

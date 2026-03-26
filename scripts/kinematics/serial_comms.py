@@ -158,6 +158,66 @@ class SerialComms:
             log.error("ROTATE write failed: %s", exc)
             return False
 
+    def send_rotate_home(self) -> bool:
+        """
+        Send ROTATE_HOME to rotate the stepper back to the drop zone (CCW 45°).
+
+        Call this after arms-in to return from the pick zone to the drop zone.
+        Firmware replies with "DONE" when the move is complete.
+        """
+        if not self.is_connected:
+            log.error("send_rotate_home called but serial port is not open.")
+            return False
+
+        try:
+            self._ser.write(b"ROTATE_HOME\n")
+            self._ser.flush()
+            log.info("ROTATE_HOME command sent.")
+            return True
+        except serial.SerialException as exc:
+            log.error("ROTATE_HOME write failed: %s", exc)
+            return False
+
+    def send_pick(self) -> bool:
+        """
+        Send PICK to trigger the gripper pick sequence on the ESP32.
+
+        The firmware lowers the lift servo, closes the grip, raises the lift,
+        then rotates the rotation servo back to neutral and replies "DONE".
+        """
+        if not self.is_connected:
+            log.error("send_pick called but serial port is not open.")
+            return False
+
+        try:
+            self._ser.write(b"PICK\n")
+            self._ser.flush()
+            log.info("PICK command sent.")
+            return True
+        except serial.SerialException as exc:
+            log.error("PICK write failed: %s", exc)
+            return False
+
+    def send_drop(self) -> bool:
+        """
+        Send DROP to trigger the gripper drop sequence on the ESP32.
+
+        The firmware lowers the lift servo, opens the grip, raises the lift,
+        then replies "DONE".
+        """
+        if not self.is_connected:
+            log.error("send_drop called but serial port is not open.")
+            return False
+
+        try:
+            self._ser.write(b"DROP\n")
+            self._ser.flush()
+            log.info("DROP command sent.")
+            return True
+        except serial.SerialException as exc:
+            log.error("DROP write failed: %s", exc)
+            return False
+
     def send_home(self) -> bool:
         """
         Send the HOME command to reset encoder counts to zero.

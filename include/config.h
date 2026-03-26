@@ -30,3 +30,15 @@
 #define PWM_RESOLUTION 8
 #define PWM_MAX        50
 #define CPR            4192.0f
+
+// Gripper servos (LEDC channels 5 & 6 — 0-4 taken by motors + rotate servo)
+#define GRIP_SERVO_PIN    5
+#define GRIP_SERVO_CH     5
+#define LIFT_SERVO_PIN    18
+#define LIFT_SERVO_CH     6
+
+// Gripper angles (degrees) — tune on hardware
+#define GRIP_OPEN_ANGLE   5
+#define GRIP_CLOSED_ANGLE 62
+#define LIFT_UP_ANGLE     40
+#define LIFT_DOWN_ANGLE   170

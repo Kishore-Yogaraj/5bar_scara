@@ -7,7 +7,10 @@ struct MotorCommand {
     int   servo_angle;
     bool  valid;
     bool  home;
-    bool  rotate;   // triggers 180° stepper repositioning
+    bool  rotate;        // rotate stepper to pick zone (CW 45°)
+    bool  rotate_home;   // rotate stepper back to drop zone (CCW 45°)
+    bool  pick;          // execute gripper pick sequence
+    bool  drop;          // execute gripper drop sequence
 };
 
 class SerialComms {
