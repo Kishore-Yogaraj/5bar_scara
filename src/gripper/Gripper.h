@@ -24,8 +24,8 @@ private:
     int _gripOpen, _gripClosed;
     int _liftUp, _liftDown;
 
-    enum PickState  { P_IDLE, P_LOWERING, P_CLOSING, P_LIFTING };
-    enum DropState  { D_IDLE, D_LOWERING, D_OPENING, D_LIFTING };
+    enum PickState  { P_IDLE, P_LOWERING, P_GRIPPING, P_LIFTING, P_LIFTING_DONE };
+    enum DropState  { D_IDLE, D_LOWERING, D_OPENING,  D_LIFTING, D_LIFTING_DONE };
 
     PickState _pickState = P_IDLE;
     DropState _dropState = D_IDLE;

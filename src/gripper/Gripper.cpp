@@ -23,7 +23,7 @@ void Gripper::update() {
     _gripServo.update();
     _liftServo.update();
 
-    // Pick: lower → close → lift
+    // Pick: lower → grip → lift (each step waits for the previous servo to arrive)
     if (_runningPick) {
         switch (_pickState) {
             case P_IDLE:
@@ -31,15 +31,22 @@ void Gripper::update() {
                 _pickState = P_LOWERING;
                 break;
             case P_LOWERING:
-                if (_liftServo.isAtTarget()) _pickState = P_CLOSING;
+                if (_liftServo.isAtTarget()) {
+                    _gripServo.setTargetAngle(_gripClosed);
+                    _pickState = P_GRIPPING;
+                }
                 break;
-            case P_CLOSING:
-                _gripServo.setTargetAngle(_gripClosed);
-                _pickState = P_LIFTING;
-                break;
-            case P_LIFTING:
+            case P_GRIPPING:
                 if (_gripServo.isAtTarget()) {
                     _liftServo.setTargetAngle(_liftUp);
+                    _pickState = P_LIFTING;
+                }
+                break;
+            case P_LIFTING:
+                _pickState = P_LIFTING_DONE;
+                break;
+            case P_LIFTING_DONE:
+                if (_liftServo.isAtTarget()) {
                     _pickState   = P_IDLE;
                     _runningPick = false;
                 }
@@ -47,7 +54,7 @@ void Gripper::update() {
         }
     }
 
-    // Drop: lower → open → lift
+    // Drop: lower → open → lift (each step waits for the previous servo to arrive)
     if (_runningDrop) {
         switch (_dropState) {
             case D_IDLE:
@@ -55,15 +62,22 @@ void Gripper::update() {
                 _dropState = D_LOWERING;
                 break;
             case D_LOWERING:
-                if (_liftServo.isAtTarget()) _dropState = D_OPENING;
+                if (_liftServo.isAtTarget()) {
+                    _gripServo.setTargetAngle(_gripOpen);
+                    _dropState = D_OPENING;
+                }
                 break;
             case D_OPENING:
-                _gripServo.setTargetAngle(_gripOpen);
-                _dropState = D_LIFTING;
-                break;
-            case D_LIFTING:
                 if (_gripServo.isAtTarget()) {
                     _liftServo.setTargetAngle(_liftUp);
+                    _dropState = D_LIFTING;
+                }
+                break;
+            case D_LIFTING:
+                _dropState = D_LIFTING_DONE;
+                break;
+            case D_LIFTING_DONE:
+                if (_liftServo.isAtTarget()) {
                     _dropState   = D_IDLE;
                     _runningDrop = false;
                 }

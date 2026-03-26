@@ -84,7 +84,7 @@ void loop() {
     }
     rotatemotor.writeAngle(0);
     unsigned long pt = millis();
-    while (millis() - pt < 500) { motor1.update(); motor2.update(); delay(10); }
+    while (millis() - pt < 500) { myGripper.update(); motor1.update(); motor2.update(); delay(10); }
     Serial.println("DONE");
   }
   else if (cmd.drop) {
