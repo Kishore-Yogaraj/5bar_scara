@@ -65,6 +65,15 @@ CONFIG = {
     "move_drain_timeout": 15.0,  # how long to wait for ESP32 DONE after each move
     "rotate_timeout":     30.0,  # how long to wait for ESP32 DONE after ROTATE
     "rotate_settle":       3.0,  # settle countdown after stepper returns
+    "arms_in_timeout":    10.0,  # how long to wait for ESP32 DONE after arms-in move
+
+    # ── Arms-in (tuck) angles ──────────────────────────────────────────────────
+    # IK angles (degrees from +x axis) the arms move to before the stepper rotates.
+    # Adjust these until the tuck position clears any obstacles.
+    # HOME_ANGLE is 90° (straight up); values below 90° pull left arm inward,
+    # values above 90° pull right arm inward.
+    "arms_in_theta1_deg": 60.0,   # left arm tuck angle
+    "arms_in_theta2_deg": 120.0,  # right arm tuck angle
 
     # ── Pick ordering strategy ────────────────────────────────────────────────
     # "nearest"   — nearest to robot origin first (default from get_detections)
@@ -95,6 +104,7 @@ log = logging.getLogger("pick")
 class State(Enum):
     STARTUP     = auto()
     SCAN        = auto()
+    ARMS_IN     = auto()   # tuck arms before stepper rotates
     ROTATE_BACK = auto()
     MOVE_TO_OBJ = auto()
     DWELL       = auto()
@@ -313,7 +323,25 @@ def run(cfg: dict, comms: SerialComms | None):
                     cv2.waitKey(1)
 
                 current = visit_list.pop(0)
-                state   = State.ROTATE_BACK
+                state   = State.ARMS_IN
+
+            # ── ARMS IN ───────────────────────────────────────────────────────
+            elif state == State.ARMS_IN:
+                log.info("Bringing arms to tucked position …")
+                cmd1, cmd2 = angles_to_commands(
+                    cfg["arms_in_theta1_deg"], cfg["arms_in_theta2_deg"]
+                )
+                log.info("  arms-in: θ1=%.1f°  θ2=%.1f°  cmd=(%.2f, %.2f)",
+                         cfg["arms_in_theta1_deg"], cfg["arms_in_theta2_deg"], cmd1, cmd2)
+                if comms is not None:
+                    ok = comms.send_command(cmd1, cmd2, 0)
+                    if not ok:
+                        log.error("  Arms-in command failed — continuing to rotate.")
+                    elif not comms.wait_for_done("DONE", timeout=cfg["arms_in_timeout"]):
+                        log.warning("  Arms-in timed out (%.1fs).", cfg["arms_in_timeout"])
+                else:
+                    log.info("  [SIM] Arms-in command not sent.")
+                state = State.ROTATE_BACK
 
             # ── ROTATE BACK ───────────────────────────────────────────────────
             elif state == State.ROTATE_BACK:
