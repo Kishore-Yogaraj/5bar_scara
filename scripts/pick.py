@@ -78,11 +78,13 @@ CONFIG = {
     "arms_in_theta1_deg": 125.0,   # left arm tuck angle
     "arms_in_theta2_deg":  55.0,   # right arm tuck angle
 
-    # ── Drop-off position ──────────────────────────────────────────────────────
-    # Arm angles (degrees) to move to at the drop zone before releasing the object.
-    # Adjust until the end-effector is over the drop target.
-    "drop_theta1_deg": 110.0,   # left arm angle at drop position
-    "drop_theta2_deg": 70.0,   # right arm angle at drop position
+    # ── Drop-off positions (by colour) ────────────────────────────────────────
+    # Arm angles (degrees) at the drop zone for each detected colour.
+    # Adjust until the end-effector is over the correct bin for each colour.
+    "drop_red_theta1_deg":  130.0,  # left arm angle when dropping a red object
+    "drop_red_theta2_deg":   50.0,  # right arm angle when dropping a red object
+    "drop_blue_theta1_deg": 95.0,  # left arm angle when dropping a blue object
+    "drop_blue_theta2_deg":  85.0,  # right arm angle when dropping a blue object
 
     # ── Pick ordering strategy ────────────────────────────────────────────────
     # "nearest"   — nearest to robot origin first (default from get_detections)
@@ -478,11 +480,12 @@ def run(cfg: dict, comms: SerialComms | None):
 
             # ── MOVE TO DROP POSITION ─────────────────────────────────────────
             elif state == State.MOVE_TO_DROP:
-                log.info("Moving to drop position: θ1=%.1f°  θ2=%.1f°",
-                         cfg["drop_theta1_deg"], cfg["drop_theta2_deg"])
-                cmd1, cmd2 = angles_to_commands(
-                    cfg["drop_theta1_deg"], cfg["drop_theta2_deg"]
-                )
+                color  = current["color"]
+                theta1 = cfg.get(f"drop_{color}_theta1_deg", cfg["drop_red_theta1_deg"])
+                theta2 = cfg.get(f"drop_{color}_theta2_deg", cfg["drop_red_theta2_deg"])
+                log.info("Moving to %s drop position: θ1=%.1f°  θ2=%.1f°",
+                         color, theta1, theta2)
+                cmd1, cmd2 = angles_to_commands(theta1, theta2)
                 log.info("  drop-move: cmd=(%.2f, %.2f)", cmd1, cmd2)
                 if comms is not None:
                     ok = comms.send_command(cmd1, cmd2, 0)
