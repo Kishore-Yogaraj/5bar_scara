@@ -58,7 +58,7 @@ void loop() {
     moving = true;
   }
   else if (cmd.rotate) {
-    stepper.setDirection(false);   // true = CCW — flip to false if rotation direction is wrong
+    stepper.setDirection(false); //CW
     stepper.moveAngleSinusoidal(45, SM_MIN_DELAY, SM_MAX_DELAY);
     Serial.println("DONE");
   }

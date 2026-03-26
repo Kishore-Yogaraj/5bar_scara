@@ -72,8 +72,8 @@ CONFIG = {
     # Adjust these until the tuck position clears any obstacles.
     # HOME_ANGLE is 90° (straight up); values below 90° pull left arm inward,
     # values above 90° pull right arm inward.
-    "arms_in_theta1_deg": 60.0,   # left arm tuck angle
-    "arms_in_theta2_deg": 120.0,  # right arm tuck angle
+    "arms_in_theta1_deg": 125.0,   # left arm tuck angle
+    "arms_in_theta2_deg": 55.0,  # right arm tuck angle
 
     # ── Pick ordering strategy ────────────────────────────────────────────────
     # "nearest"   — nearest to robot origin first (default from get_detections)
@@ -327,6 +327,21 @@ def run(cfg: dict, comms: SerialComms | None):
 
             # ── ARMS IN ───────────────────────────────────────────────────────
             elif state == State.ARMS_IN:
+                # Step 1: move to 90° home position first
+                log.info("Moving arms to home position (90°, 90°) …")
+                home_cmd1, home_cmd2 = angles_to_commands(90.0, 90.0)
+                log.info("  arms-home: θ1=90.0°  θ2=90.0°  cmd=(%.2f, %.2f)",
+                         home_cmd1, home_cmd2)
+                if comms is not None:
+                    ok = comms.send_command(home_cmd1, home_cmd2, 0)
+                    if not ok:
+                        log.warning("  Arms-home command failed — continuing to tuck.")
+                    elif not comms.wait_for_done("DONE", timeout=cfg["arms_in_timeout"]):
+                        log.warning("  Arms-home timed out (%.1fs).", cfg["arms_in_timeout"])
+                else:
+                    log.info("  [SIM] Arms-home command not sent.")
+
+                # Step 2: move to configured tuck angles
                 log.info("Bringing arms to tucked position …")
                 cmd1, cmd2 = angles_to_commands(
                     cfg["arms_in_theta1_deg"], cfg["arms_in_theta2_deg"]
