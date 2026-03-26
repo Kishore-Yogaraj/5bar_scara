@@ -295,7 +295,7 @@ class SerialComms:
                     raw  = self._ser.readline()
                     line = raw.decode("utf-8", errors="replace").rstrip()
                     if line:
-                        log.debug("[ESP32] %s", line)
+                        log.info("[ESP32] %s", line)
                         if keyword in line:
                             return True
                 except serial.SerialException as exc:

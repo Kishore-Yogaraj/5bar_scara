@@ -81,8 +81,8 @@ CONFIG = {
     # ── Drop-off positions (by colour) ────────────────────────────────────────
     # Arm angles (degrees) at the drop zone for each detected colour.
     # Adjust until the end-effector is over the correct bin for each colour.
-    "drop_red_theta1_deg":  130.0,  # left arm angle when dropping a red object
-    "drop_red_theta2_deg":   50.0,  # right arm angle when dropping a red object
+    "drop_red_theta1_deg":  110.0,  # left arm angle when dropping a red object
+    "drop_red_theta2_deg":   70.0,  # right arm angle when dropping a red object
     "drop_blue_theta1_deg": 95.0,  # left arm angle when dropping a blue object
     "drop_blue_theta2_deg":  85.0,  # right arm angle when dropping a blue object
 
