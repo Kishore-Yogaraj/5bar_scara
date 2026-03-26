@@ -33,8 +33,9 @@ Gripper     myGripper(gripServo, liftServo);
 StepperMotor stepper(SM_step, SM_dir, STEPS_PER_REV);
 
 
-bool moving          = false;
-int  pendingServoAngle = 0;
+bool          moving           = false;
+int           pendingServoAngle = 0;
+unsigned long lastEncPrint     = 0;
 
 void setup() {
     comms.begin();
@@ -62,7 +63,8 @@ void loop() {
     motor1.setTargetDegrees(cmd.angle1);
     motor2.setTargetDegrees(cmd.angle2);
     pendingServoAngle = cmd.servo_angle;
-    moving = true;
+    moving       = true;
+    lastEncPrint = 0;   // force first periodic print immediately
   }
   else if (cmd.rotate) {
     stepper.setDirection(false); //CW — to pick zone
@@ -99,20 +101,27 @@ void loop() {
   }
 
     motor1.update();
-    Serial.print("Target: ");
-    Serial.print(motor1.getTargetTicks());
-    Serial.print(" M1: ");
-    Serial.println(enc1.getPosition());
+    // Serial.print("Target: ");
+    // Serial.print(motor1.getTargetTicks());
+    // Serial.print(" M1: ");
+    // Serial.println(enc1.getPosition());
 
     motor2.update();
-    Serial.print("Target: ");
-    Serial.print(motor2.getTargetTicks());
-    Serial.print(" M2: ");
-    Serial.println(enc2.getPosition());
+    // Serial.print("Target: ");
+    // Serial.print(motor2.getTargetTicks());
+    // Serial.print(" M2: ");
+    // Serial.println(enc2.getPosition());
 
     myGripper.update();
 
     if (moving) {
+        unsigned long now = millis();
+        if (now - lastEncPrint >= 500) {
+            lastEncPrint = now;
+            Serial.printf("ENC t1=%.0f p1=%d t2=%.0f p2=%d\n",
+                motor1.getTargetTicks(), (int)enc1.getPosition(),
+                motor2.getTargetTicks(), (int)enc2.getPosition());
+        }
         float err1 = abs(motor1.getTargetTicks() - (float)enc1.getPosition());
         float err2 = abs(motor2.getTargetTicks() - (float)enc2.getPosition());
         if (err1 <= 10.0f && err2 <= 10.0f) {
@@ -124,6 +133,9 @@ void loop() {
             rotatemotor.writeAngle(pendingServoAngle);
             t = millis();
             while (millis() - t < 500) { motor1.update(); motor2.update(); delay(10); }
+            Serial.printf("ENC t1=%.0f p1=%d t2=%.0f p2=%d\n",
+                motor1.getTargetTicks(), (int)enc1.getPosition(),
+                motor2.getTargetTicks(), (int)enc2.getPosition());
             Serial.println("DONE");
         }
     }
