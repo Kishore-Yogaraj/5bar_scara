@@ -76,6 +76,12 @@ void loop() {
     stepper.moveAngleSinusoidal(45, SM_MIN_DELAY, SM_MAX_DELAY);
     Serial.println("DONE");
   }
+  else if (cmd.step_cmd) {
+    // positive degrees = CW (same direction as ROTATE), negative = CCW
+    stepper.setDirection(cmd.stepper_deg >= 0 ? false : true);
+    stepper.moveAngleSinusoidal(abs(cmd.stepper_deg), SM_MIN_DELAY, SM_MAX_DELAY);
+    Serial.println("DONE");
+  }
   else if (cmd.pick) {
     myGripper.pickSequence();
     while (myGripper.isRunningPick()) {

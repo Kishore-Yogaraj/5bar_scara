@@ -8,7 +8,7 @@ void SerialComms::begin() {
 }
 
 MotorCommand SerialComms::read() {
-    MotorCommand cmd = {0.0f, 0.0f, 90, false, false, false, false, false, false};
+    MotorCommand cmd = {0.0f, 0.0f, 90, false, false, false, false, false, false, false, 0.0f};
 
     if (!Serial.available()) {
         return cmd;
@@ -39,6 +39,12 @@ MotorCommand SerialComms::read() {
 
     if (input == "DROP") {
         cmd.drop = true;
+        return cmd;
+    }
+
+    if (input.startsWith("STEP:")) {
+        cmd.step_cmd    = true;
+        cmd.stepper_deg = input.substring(5).toFloat();
         return cmd;
     }
 

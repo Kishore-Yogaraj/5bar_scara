@@ -11,6 +11,8 @@ struct MotorCommand {
     bool  rotate_home;   // rotate stepper back to drop zone (CCW 45°)
     bool  pick;          // execute gripper pick sequence
     bool  drop;          // execute gripper drop sequence
+    bool  step_cmd;      // move stepper by stepper_deg degrees (+ = CW, - = CCW)
+    float stepper_deg;
 };
 
 class SerialComms {
