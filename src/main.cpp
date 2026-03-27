@@ -84,6 +84,7 @@ void loop() {
       myGripper.update();
       motor1.update();
       motor2.update();
+      rotatemotor.update();
       delay(10);
     }
     rotatemotor.setTargetAngle(0);
@@ -97,6 +98,7 @@ void loop() {
     myGripper.dropSequence();
     while (myGripper.isRunningDrop()) {
       myGripper.update();
+      rotatemotor.update();
       motor1.update();
       motor2.update();
       delay(10);
@@ -134,11 +136,18 @@ void loop() {
             unsigned long t = millis();
             while (millis() - t < 1000) { motor1.update(); motor2.update(); delay(10); }
             // Rotate gripper to object angle; servo stays here until PICK rotates it back
+
+            
             
             rotatemotor.setTargetAngle(pendingServoAngle);
-            rotatemotor.update();
+
+            unsigned long rt = millis();
+            while (millis() - rt < 1000) {   // adjust duration to taste
+                rotatemotor.update();
+                delay(10);
+            }
             
-          
+        
              
             t = millis();
             while (millis() - t < 500) { motor1.update(); motor2.update(); delay(10); }
