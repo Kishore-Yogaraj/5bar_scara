@@ -41,4 +41,4 @@
 #define GRIP_OPEN_ANGLE   5
 #define GRIP_CLOSED_ANGLE 65
 #define LIFT_UP_ANGLE     5
-#define LIFT_DOWN_ANGLE   105
+#define LIFT_DOWN_ANGLE   120
