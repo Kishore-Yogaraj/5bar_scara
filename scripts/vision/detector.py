@@ -175,6 +175,30 @@ def _homography_jacobian(H: np.ndarray, u: float, v: float) -> np.ndarray:
     return np.array([[dXdu, dXdv], [dYdu, dYdv]], dtype=np.float64)
 
 
+def _parallax_correct(
+    u: float,
+    v: float,
+    K: np.ndarray,
+    z_obj_mm: float,
+) -> tuple[float, float]:
+    """
+    Shift a detected top-surface centroid toward the base-centre position to
+    remove parallax offset caused by object height.
+
+    Uses the pinhole small-angle approximation:
+        u_corr = u - (u - cx) * z_obj_mm / fx
+        v_corr = v - (v - cy) * z_obj_mm / fy
+
+    The correction is zero at the principal point and grows linearly with
+    distance from centre, exactly compensating for the perspective shift of a
+    flat top surface at height z_obj_mm above the calibration plane.
+    """
+    cx_px = K[0, 2];  cy_px = K[1, 2]
+    fx    = K[0, 0];  fy    = K[1, 1]
+    return (u - (u - cx_px) * z_obj_mm / fx,
+            v - (v - cy_px) * z_obj_mm / fy)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Mask builders
 # ─────────────────────────────────────────────────────────────────────────────
@@ -261,6 +285,8 @@ def get_detections(
     frame: np.ndarray,
     H: np.ndarray,
     cfg: dict,
+    K: np.ndarray | None = None,
+    z_obj_mm: float = 0.0,
 ) -> list[Detection]:
     """
     Detect red and blue objects in *frame* and return their robot-frame poses.
@@ -289,7 +315,10 @@ def get_detections(
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         for c in _filter_contours(contours):
             cx, cy        = _get_centroid(c)
-            x_mm, y_mm    = _pixel_to_world(H, cx, cy)
+            u, v          = float(cx), float(cy)
+            if K is not None and z_obj_mm != 0.0:
+                u, v = _parallax_correct(u, v, K, z_obj_mm)
+            x_mm, y_mm    = _pixel_to_world(H, u, v)
             angle_deg, _  = _get_orientation(c, H, cx, cy)
             box_pts       = cv2.boxPoints(cv2.minAreaRect(c)).astype(np.int32)
 
@@ -444,7 +473,7 @@ def _run_preview(args: argparse.Namespace):
         if K is not None:
             frame = cv2.undistort(frame, K, dist)
 
-        dets = get_detections(frame, H, cfg)
+        dets = get_detections(frame, H, cfg, K=K, z_obj_mm=args.z_obj)
 
         # Print detections to console
         for d in dets:
@@ -474,4 +503,6 @@ if __name__ == "__main__":
     parser.add_argument("--homography", type=str, default=str(_here / "homography.json"))
     parser.add_argument("--hsv",        type=str, default=str(_here / "hsv_config.json"))
     parser.add_argument("--intrinsics", type=str, default=str(_here / "intrinsics"))
+    parser.add_argument("--z-obj",      type=float, default=0.0,
+                        help="Object height above work surface (mm) for parallax correction")
     _run_preview(parser.parse_args())

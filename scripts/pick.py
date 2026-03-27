@@ -71,6 +71,12 @@ CONFIG = {
     "drop_timeout":        10.0, # how long to wait for ESP32 DONE after DROP
     "rescan_dwell":         5.0, # seconds to dwell at drop zone before re-scanning for new objects
 
+    # ── Parallax correction ───────────────────────────────────────────────────
+    # Height of the objects above the work surface (mm).  Set to 0.0 to disable.
+    # Corrects the detected centroid for the perspective shift caused by object
+    # height before applying the homography (see detector._parallax_correct).
+    "z_obj_mm": 0.0,
+
     # ── Arms-in (tuck) angles ──────────────────────────────────────────────────
     # IK angles (degrees from +x axis) the arms move to before the stepper rotates.
     # Adjust these until the tuck position clears any obstacles.
@@ -317,7 +323,7 @@ def run(cfg: dict, comms: SerialComms | None):
                 if K is not None:
                     frame = cv2.undistort(frame, K, dist)
 
-                detections      = get_detections(frame, H, vcfg)
+                detections      = get_detections(frame, H, vcfg, K=K, z_obj_mm=cfg["z_obj_mm"])
                 visit_list      = order_picks(detections, cfg["pick_order"])
                 total_objs      = len(visit_list)
                 scan_frame      = frame
@@ -559,7 +565,7 @@ def run(cfg: dict, comms: SerialComms | None):
                 if K is not None:
                     frame = cv2.undistort(frame, K, dist)
 
-                new_dets    = get_detections(frame, H, vcfg)
+                new_dets    = get_detections(frame, H, vcfg, K=K, z_obj_mm=cfg["z_obj_mm"])
                 new_ordered = order_picks(new_dets, cfg["pick_order"])
                 last_detections = list(new_ordered)
 
