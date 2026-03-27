@@ -69,6 +69,7 @@ CONFIG = {
     "arms_in_timeout":     10.0, # how long to wait for ESP32 DONE after arms-in move
     "pick_timeout":        15.0, # how long to wait for ESP32 DONE after PICK
     "drop_timeout":        10.0, # how long to wait for ESP32 DONE after DROP
+    "rescan_dwell":         5.0, # seconds to dwell at drop zone before re-scanning for new objects
 
     # ── Arms-in (tuck) angles ──────────────────────────────────────────────────
     # IK angles (degrees from +x axis) the arms move to before the stepper rotates.
@@ -131,6 +132,7 @@ class State(Enum):
     ROTATE_TO_DROP   = auto()   # stepper CCW back to drop zone
     MOVE_TO_DROP     = auto()   # arm moves to drop position
     DROP_OBJ         = auto()   # send DROP; ESP32 releases object
+    RESCAN           = auto()   # dwell then re-scan pick zone for new objects after queue drains
     DONE             = auto()
 
 
@@ -535,7 +537,46 @@ def run(cfg: dict, comms: SerialComms | None):
                     current = visit_list.pop(0)
                     state   = State.ARMS_IN
                 else:
+                    state = State.RESCAN
+
+            # ── RESCAN ────────────────────────────────────────────────────────
+            elif state == State.RESCAN:
+                log.info("All queued objects done — dwelling %.0fs before re-scan …",
+                         cfg["rescan_dwell"])
+                ok = countdown(cfg["rescan_dwell"], "Re-scan in",
+                               cap, cfg["show_preview"], H, H_inv,
+                               vcfg, K, dist, last_detections, comms)
+                if not ok:
+                    break
+
+                log.info("Re-scanning for new objects …")
+                ret, frame = cap.read()
+                if not ret:
+                    log.warning("Failed to capture re-scan frame — stopping.")
                     state = State.DONE
+                    continue
+
+                if K is not None:
+                    frame = cv2.undistort(frame, K, dist)
+
+                new_dets    = get_detections(frame, H, vcfg)
+                new_ordered = order_picks(new_dets, cfg["pick_order"])
+                last_detections = list(new_ordered)
+
+                if not new_ordered:
+                    log.info("Re-scan: no new objects found — run complete.")
+                    state = State.DONE
+                    continue
+
+                visit_list  = new_ordered
+                total_objs += len(new_ordered)
+                log.info("Re-scan found %d new object(s):", len(new_ordered))
+                for i, d in enumerate(new_ordered):
+                    log.info("  %d. %s  (%.1f, %.1f) mm  angle=%.1f°",
+                             i + 1, d["color"], d["x_mm"], d["y_mm"], d["angle_deg"])
+
+                current = visit_list.pop(0)
+                state   = State.ARMS_IN
 
             # ── DONE ──────────────────────────────────────────────────────────
             elif state == State.DONE:
