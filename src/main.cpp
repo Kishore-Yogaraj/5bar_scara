@@ -36,13 +36,14 @@ StepperMotor stepper(SM_step, SM_dir, STEPS_PER_REV);
 bool          moving           = false;
 int           pendingServoAngle = 0;
 unsigned long lastEncPrint     = 0;
+bool rotateTargetSet = false;
 
 void setup() {
     comms.begin();
     motor1.begin();
     motor2.begin();
     rotatemotor.begin();
-    rotatemotor.writeAngle(0);   // start at neutral
+    rotatemotor.setTargetAngle(0);   // start at neutral
     myGripper.begin(GRIP_OPEN_ANGLE, GRIP_CLOSED_ANGLE, LIFT_UP_ANGLE, LIFT_DOWN_ANGLE);
     stepper.begin();
     Serial.println("Motors ready.");
@@ -50,6 +51,7 @@ void setup() {
 
 void loop() {
   MotorCommand cmd = comms.read();
+  
 
   if (cmd.home) {
     enc1.reset();
@@ -84,7 +86,9 @@ void loop() {
       motor2.update();
       delay(10);
     }
-    rotatemotor.writeAngle(0);
+    rotatemotor.setTargetAngle(0);
+    
+    
     unsigned long pt = millis();
     while (millis() - pt < 500) { myGripper.update(); motor1.update(); motor2.update(); delay(10); }
     Serial.println("DONE");
@@ -130,7 +134,12 @@ void loop() {
             unsigned long t = millis();
             while (millis() - t < 1000) { motor1.update(); motor2.update(); delay(10); }
             // Rotate gripper to object angle; servo stays here until PICK rotates it back
-            rotatemotor.writeAngle(pendingServoAngle);
+            
+            rotatemotor.setTargetAngle(pendingServoAngle);
+            rotatemotor.update();
+            
+          
+             
             t = millis();
             while (millis() - t < 500) { motor1.update(); motor2.update(); delay(10); }
             Serial.printf("ENC t1=%.0f p1=%d t2=%.0f p2=%d\n",
