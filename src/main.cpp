@@ -101,16 +101,16 @@ void loop() {
   }
 
     motor1.update();
-    Serial.print("Target: ");
-    Serial.print(motor1.getTargetTicks());
-    Serial.print(" M1: ");
-    Serial.println(enc1.getPosition());
+    // Serial.print("Target: ");
+    // Serial.print(motor1.getTargetTicks());
+    // Serial.print(" M1: ");
+    // Serial.println(enc1.getPosition());
 
     motor2.update();
-    Serial.print("Target: ");
-    Serial.print(motor2.getTargetTicks());
-    Serial.print(" M2: ");
-    Serial.println(enc2.getPosition());
+    // Serial.print("Target: ");
+    // Serial.print(motor2.getTargetTicks());
+    // Serial.print(" M2: ");
+    // Serial.println(enc2.getPosition());
 
     myGripper.update();
 

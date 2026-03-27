@@ -81,16 +81,24 @@ CONFIG = {
     # ── Drop-off positions (by colour) ────────────────────────────────────────
     # Arm angles (degrees) at the drop zone for each detected colour.
     # Adjust until the end-effector is over the correct bin for each colour.
-    "drop_red_theta1_deg":  123.34,  # left arm angle when dropping a red object
-    "drop_red_theta2_deg":   80.60,  # right arm angle when dropping a red object
-    "drop_blue_theta1_deg": 97.05,  # left arm angle when dropping a blue object
-    "drop_blue_theta2_deg":  58.19,  # right arm angle when dropping a blue object
+    "drop_blue_theta1_deg":  123.34,  # left arm angle when dropping a red object
+    "drop_blue_theta2_deg":   80.60,  # right arm angle when dropping a red object
+    "drop_red_theta1_deg": 96.11,  # left arm angle when dropping a blue object
+    "drop_red_theta2_deg":  52.22,  # right arm angle when dropping a blue object
 
     # ── Pick ordering strategy ────────────────────────────────────────────────
     # "nearest"   — nearest to robot origin first (default from get_detections)
     # "red_first" — all red objects before blue
     # "blue_first"— all blue objects before red
-    "pick_order": "nearest",
+    "pick_order": "red_first",
+
+    # ── Quadrant position offset (mm) ─────────────────────────────────────────
+    # Applied when a detected object is in the positive-X AND positive-Y quadrant
+    # (camera bottom-left corner per calibration convention).
+    # Tune these values physically to correct systematic misses caused by lens
+    # distortion at the image edge.  Start at 0.0 and adjust in small steps.
+    "quadrant_pp_offset_x_mm": -5.0,   # extra mm added to X (positive = right)
+    "quadrant_pp_offset_y_mm": -10.0,   # extra mm added to Y (positive = forward)
 
     # ── Preview window ────────────────────────────────────────────────────────
     "show_preview": True,
@@ -400,8 +408,23 @@ def run(cfg: dict, comms: SerialComms | None):
                 log.info("── Object %d / %d  (%s) ─────────────────────",
                          visited, total_objs, current["color"])
 
+                x_mm = current["x_mm"]
+                y_mm = current["y_mm"]
+
+                # Apply quadrant correction for +X / +Y region
+                if x_mm > 0.0 and y_mm > 0.0:
+                    off_x = cfg["quadrant_pp_offset_x_mm"]
+                    off_y = cfg["quadrant_pp_offset_y_mm"]
+                    if off_x != 0.0 or off_y != 0.0:
+                        log.info("  [quadrant offset] raw=(%.1f, %.1f)  "
+                                 "offset=(%.1f, %.1f)  corrected=(%.1f, %.1f)",
+                                 x_mm, y_mm, off_x, off_y,
+                                 x_mm + off_x, y_mm + off_y)
+                    x_mm += off_x
+                    y_mm += off_y
+
                 ok = move_to(
-                    current["x_mm"], current["y_mm"],
+                    x_mm, y_mm,
                     comms,
                     label=f"OBJ-{visited}",
                     drain_timeout=cfg["move_drain_timeout"],
