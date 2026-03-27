@@ -84,9 +84,8 @@ void loop() {
       motor2.update();
       delay(10);
     }
-    rotatemotor.writeAngle(0);
-    unsigned long pt = millis();
-    while (millis() - pt < 500) { myGripper.update(); motor1.update(); motor2.update(); delay(10); }
+    rotatemotor.setTargetAngle(0);
+    while (!rotatemotor.isAtTarget()) { rotatemotor.update(); myGripper.update(); motor1.update(); motor2.update(); delay(10); }
     Serial.println("DONE");
   }
   else if (cmd.drop) {
@@ -113,6 +112,7 @@ void loop() {
     // Serial.println(enc2.getPosition());
 
     myGripper.update();
+    rotatemotor.update();
 
     if (moving) {
         unsigned long now = millis();
@@ -130,9 +130,8 @@ void loop() {
             unsigned long t = millis();
             while (millis() - t < 1000) { motor1.update(); motor2.update(); delay(10); }
             // Rotate gripper to object angle; servo stays here until PICK rotates it back
-            rotatemotor.writeAngle(pendingServoAngle);
-            t = millis();
-            while (millis() - t < 500) { motor1.update(); motor2.update(); delay(10); }
+            rotatemotor.setTargetAngle(pendingServoAngle);
+            while (!rotatemotor.isAtTarget()) { rotatemotor.update(); motor1.update(); motor2.update(); delay(10); }
             Serial.printf("ENC t1=%.0f p1=%d t2=%.0f p2=%d\n",
                 motor1.getTargetTicks(), (int)enc1.getPosition(),
                 motor2.getTargetTicks(), (int)enc2.getPosition());
