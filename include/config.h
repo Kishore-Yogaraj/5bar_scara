@@ -38,7 +38,7 @@
 #define LIFT_SERVO_CH     6
 
 // Gripper angles (degrees) — tune on hardware
-#define GRIP_OPEN_ANGLE   62
-#define GRIP_CLOSED_ANGLE 62
-#define LIFT_UP_ANGLE     40
-#define LIFT_DOWN_ANGLE   170
+#define GRIP_OPEN_ANGLE   5
+#define GRIP_CLOSED_ANGLE 65
+#define LIFT_UP_ANGLE     5
+#define LIFT_DOWN_ANGLE   105

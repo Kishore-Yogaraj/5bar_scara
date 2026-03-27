@@ -67,13 +67,13 @@ void loop() {
     lastEncPrint = 0;   // force first periodic print immediately
   }
   else if (cmd.rotate) {
-    stepper.setDirection(false); //CW — to pick zone
-    stepper.moveAngleSinusoidal(45, SM_MIN_DELAY, SM_MAX_DELAY);
+    stepper.setDirection(true); //CCW — to pick zone
+    stepper.moveAngleSinusoidal(180, SM_MIN_DELAY, SM_MAX_DELAY);
     Serial.println("DONE");
   }
   else if (cmd.rotate_home) {
-    stepper.setDirection(true);  //CCW — back to drop zone
-    stepper.moveAngleSinusoidal(45, SM_MIN_DELAY, SM_MAX_DELAY);
+    stepper.setDirection(false);  //CW — back to drop zone
+    stepper.moveAngleSinusoidal(180, SM_MIN_DELAY, SM_MAX_DELAY);
     Serial.println("DONE");
   }
   else if (cmd.pick) {

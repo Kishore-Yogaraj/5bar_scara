@@ -60,7 +60,7 @@ CONFIG = {
     "camera_index": 0,
 
     # ── Timing (seconds) ──────────────────────────────────────────────────────
-    "startup_delay":       3.0,  # wait at launch before doing anything
+    "startup_delay":       5.0,  # wait at launch before doing anything
     "move_drain_timeout":  15.0, # how long to wait for ESP32 DONE after each arm move
     "rotate_timeout":      30.0, # how long to wait for ESP32 DONE after ROTATE
     "rotate_settle":        3.0, # settle countdown after stepper reaches pick zone
@@ -81,10 +81,10 @@ CONFIG = {
     # ── Drop-off positions (by colour) ────────────────────────────────────────
     # Arm angles (degrees) at the drop zone for each detected colour.
     # Adjust until the end-effector is over the correct bin for each colour.
-    "drop_red_theta1_deg":  110.0,  # left arm angle when dropping a red object
-    "drop_red_theta2_deg":   70.0,  # right arm angle when dropping a red object
-    "drop_blue_theta1_deg": 95.0,  # left arm angle when dropping a blue object
-    "drop_blue_theta2_deg":  85.0,  # right arm angle when dropping a blue object
+    "drop_red_theta1_deg":  137.69,  # left arm angle when dropping a red object
+    "drop_red_theta2_deg":   78.77,  # right arm angle when dropping a red object
+    "drop_blue_theta1_deg": 101.23,  # left arm angle when dropping a blue object
+    "drop_blue_theta2_deg":  42.31,  # right arm angle when dropping a blue object
 
     # ── Pick ordering strategy ────────────────────────────────────────────────
     # "nearest"   — nearest to robot origin first (default from get_detections)
