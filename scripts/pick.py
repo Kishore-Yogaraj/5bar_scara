@@ -81,10 +81,10 @@ CONFIG = {
     # ── Drop-off positions (by colour) ────────────────────────────────────────
     # Arm angles (degrees) at the drop zone for each detected colour.
     # Adjust until the end-effector is over the correct bin for each colour.
-    "drop_red_theta1_deg":  137.69,  # left arm angle when dropping a red object
-    "drop_red_theta2_deg":   78.77,  # right arm angle when dropping a red object
-    "drop_blue_theta1_deg": 101.23,  # left arm angle when dropping a blue object
-    "drop_blue_theta2_deg":  42.31,  # right arm angle when dropping a blue object
+    "drop_red_theta1_deg":  123.34,  # left arm angle when dropping a red object
+    "drop_red_theta2_deg":   80.60,  # right arm angle when dropping a red object
+    "drop_blue_theta1_deg": 97.05,  # left arm angle when dropping a blue object
+    "drop_blue_theta2_deg":  58.19,  # right arm angle when dropping a blue object
 
     # ── Pick ordering strategy ────────────────────────────────────────────────
     # "nearest"   — nearest to robot origin first (default from get_detections)
